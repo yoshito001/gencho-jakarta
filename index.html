@@ -86,6 +86,7 @@ button.status{cursor:pointer}
 .inline span{font-size:13px;color:var(--muted);white-space:nowrap}
 input[type="text"],textarea,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:16px}
 textarea{min-height:76px;resize:vertical}
+.when{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 .opttag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 5px;margin-left:6px;white-space:nowrap}
 h2{font-size:17px;margin:34px 0 4px}
 .lead{font-size:13px;color:var(--muted);margin:0 0 10px}
@@ -334,7 +335,7 @@ var CMP_ROWS = [
 ];
 
 /* ---------- state ---------- */
-var APP_VERSION = "2";
+var APP_VERSION = "3";
 var LS = "gencho-jkt-2026-local";
 var state = {};      // pid -> {i:{iid:{d,v,f}}, note, rank}
 var filter = "all", openId = null, saveOk = true, idb = null;
@@ -457,6 +458,7 @@ function fmtTime(t){
 function addEntry(pid, iid, entry){
   var s = st(pid), c = JSON.parse(JSON.stringify(s.i[iid] || {}));
   if (!Array.isArray(c.f)) c.f = [];
+  entry.a = Date.now();
   c.f.push(entry);
   s.i[iid] = c;
   changed(pid);
@@ -655,9 +657,11 @@ function buildRow(pl, item){
     var lab = el("span", null, item.l);
     if (item.opt) lab.appendChild(el("span", "opttag", "できなくても可"));
     b.appendChild(lab);
+    b.appendChild(el("span", "when"));
     b.addEventListener("click", function(){
       var s = st(pl.id); var c = JSON.parse(JSON.stringify(s.i[item.id] || {}));
       c.d = !c.d;
+      if (c.d) c.dt = Date.now(); else delete c.dt;
       s.i[item.id] = c;
       changed(pl.id);
     });
@@ -671,7 +675,7 @@ function buildRow(pl, item){
     var inp = el("input"); inp.type = "text"; inp.id = fid; inp.autocomplete = "off";
     if (item.t === M) inp.inputMode = "decimal";
     inp.addEventListener("input", function(){
-      st(pl.id).i[item.id] = {v: inp.value};
+      st(pl.id).i[item.id] = {v: inp.value, vt: Date.now()};
       changed(pl.id);
     });
     if (item.u){
@@ -685,6 +689,12 @@ function buildRow(pl, item){
 /* ---------- render ---------- */
 function toggle(pid){
   openId = (openId === pid) ? null : pid;
+  if (openId) {
+    var so = st(openId);
+    if (!Array.isArray(so.o)) so.o = [];
+    so.o.push(Date.now());
+    if (so.o.length > 30) so.o.splice(1, so.o.length - 30);
+  }
   saveLocal();
   PLACES.forEach(function(pl){
     var c = cardEls[pl.id], on = pl.id === openId;
@@ -709,7 +719,11 @@ function refresh(pid){
     if (!item.opt) { total++; if (d) n++; }
     row.classList.toggle("done", d);
     var ctl = document.getElementById("f-" + pid + "-" + item.id);
-    if (item.t === P) ctl.setAttribute("aria-pressed", d ? "true" : "false");
+    if (item.t === P) {
+      ctl.setAttribute("aria-pressed", d ? "true" : "false");
+      var wh = row.querySelector(".when");
+      if (wh) wh.textContent = (d && cell(pid, item.id).dt) ? fmtTime(cell(pid, item.id).dt) : "";
+    }
     else if (document.activeElement !== ctl && ctl.value !== val(pid, item.id)) ctl.value = val(pid, item.id);
   });
   var ta = document.getElementById("note-" + pid);
@@ -778,13 +792,13 @@ function tables(){
 }
 function expName(pid, iid, idx){ return pid + "_" + (iid === "_x" ? "other" : iid) + "_" + (idx + 1) + ".jpg"; }
 function fileData(){
-  var rows = [["場所", "項目", "ファイル名", "日時", "保存先", "書き出し名"]];
+  var rows = [["場所", "項目", "ファイル名", "日時", "保存先", "書き出し名", "追加した時刻"]];
   PLACES.forEach(function(pl){
     var label = pl.name + (pl.venue && val(pl.id, "name") ? " " + val(pl.id, "name") : "");
     pl.items.filter(function(x){ return x.t === P; }).concat([{id:"_x", l:"そのほか"}]).forEach(function(item){
       files(pl.id, item.id).forEach(function(x, idx){
         if (!x) return;
-        rows.push([label, item.l, x.n || "(名前なし)", fmtTime(x.t), okId(x.id) ? "アプリ内" : "カメラロールのみ", okId(x.id) ? "photos/" + expName(pl.id, item.id, idx) : ""]);
+        rows.push([label, item.l, x.n || "(名前なし)", fmtTime(x.t), okId(x.id) ? "アプリ内" : "カメラロールのみ", okId(x.id) ? "photos/" + expName(pl.id, item.id, idx) : "", fmtFull(x.a)]);
       });
     });
   });
@@ -829,14 +843,36 @@ function tsv(rows){
   return "﻿" + rows.map(function(r){ return r.map(function(c){ return String(c == null ? "" : c).replace(/[\t\r\n]+/g, " "); }).join("\t"); }).join("\r\n");
 }
 function answerData(){
-  var rows = [["場所", "区分", "項目", "入力", "済"]];
+  var rows = [["場所", "区分", "項目", "入力", "済", "記録時刻"]];
   PLACES.forEach(function(pl){
     var label = pl.name + (pl.venue && val(pl.id, "name") ? " " + val(pl.id, "name") : "");
     pl.items.forEach(function(item){
-      rows.push([label, item.g || GROUP_NAME[item.t], item.l, item.t === P ? "" : val(pl.id, item.id), isDone(pl.id, item) ? "済" : ""]);
+      var ce = cell(pl.id, item.id);
+      rows.push([label, item.g || GROUP_NAME[item.t], item.l, item.t === P ? "" : val(pl.id, item.id), isDone(pl.id, item) ? "済" : "", fmtFull(item.t === P ? ce.dt : ce.vt)]);
     });
-    if (pl.venue) rows.push([label, "推薦順", "推薦順", RANK[st(pl.id).rank] || "", ""]);
-    rows.push([label, "所感", "所感", st(pl.id).note || "", ""]);
+    if (pl.venue) rows.push([label, "推薦順", "推薦順", RANK[st(pl.id).rank] || "", "", ""]);
+    rows.push([label, "所感", "所感", st(pl.id).note || "", "", ""]);
+  });
+  return rows;
+}
+function fmtFull(t){
+  if (!t) return "";
+  var d = new Date(t); if (isNaN(d.getTime())) return "";
+  function z(n){ return (n < 10 ? "0" : "") + n; }
+  return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate()) + " " + z(d.getHours()) + ":" + z(d.getMinutes()) + ":" + z(d.getSeconds());
+}
+function timeData(){
+  var rows = [["場所", "最初に開いた時刻", "最後に開いた時刻", "最初の記録", "最後の記録"]];
+  PLACES.forEach(function(pl){
+    var s = st(pl.id), o = Array.isArray(s.o) ? s.o : [], ts = [];
+    Object.keys(s.i || {}).forEach(function(k){
+      var c = s.i[k] || {};
+      if (c.dt) ts.push(c.dt);
+      if (c.vt) ts.push(c.vt);
+      (Array.isArray(c.f) ? c.f : []).forEach(function(x){ if (x && x.a) ts.push(x.a); });
+    });
+    var label = pl.name + (pl.venue && val(pl.id, "name") ? " " + val(pl.id, "name") : "");
+    rows.push([label, fmtFull(o[0]), fmtFull(o[o.length - 1]), ts.length ? fmtFull(Math.min.apply(null, ts)) : "", ts.length ? fmtFull(Math.max.apply(null, ts)) : ""]);
   });
   return rows;
 }
@@ -873,6 +909,7 @@ document.getElementById("expmake").addEventListener("click", function(){
   zip.file("venues.tsv", tsv(cmpData()));
   zip.file("places.tsv", tsv(summaryData()));
   zip.file("files.tsv", tsv(fileData()));
+  zip.file("times.tsv", tsv(timeData()));
   var list = photoEntries(), i = 0, missing = 0;
   function next(){
     if (i >= list.length) return Promise.resolve();
