@@ -86,6 +86,12 @@ button.status{cursor:pointer}
 .inline span{font-size:13px;color:var(--muted);white-space:nowrap}
 input[type="text"],textarea,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:16px}
 textarea{min-height:76px;resize:vertical}
+.alt{font-size:12px;color:var(--warn);overflow-wrap:anywhere}
+.alt:empty{display:none}
+.whorow{display:flex;align-items:center;gap:10px;margin:12px 0 0;flex-wrap:wrap}
+.whorow label{font-size:13px;color:var(--muted)}
+.whorow input[type="text"]{flex:1;min-width:140px;width:auto}
+label.btn{display:inline-flex;align-items:center}
 .when{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 .opttag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 5px;margin-left:6px;white-space:nowrap}
 h2{font-size:17px;margin:34px 0 4px}
@@ -144,6 +150,8 @@ tr:last-child td,tr:last-child th{border-bottom:0}
   <p class="tip hidden" id="hint"></p>
   <p class="tip">12月3日から6日。場所に着いたらカードを開き、最初に看板か入口を1枚撮ってください。写真はカメラアプリで撮ってから、各項目の下の「写真と動画を追加」でカメラロールから選ぶと、元のファイル名が残ります。動画はファイル名だけを記録します。入力と写真はこの端末の中だけに保存されます。</p>
 
+  <div class="whorow"><label for="who">この端末の記録者</label><input type="text" id="who" autocomplete="off" maxlength="20"></div>
+
   <div class="cards" id="cards"></div>
 
   <h2>懇親会候補の比較</h2>
@@ -178,6 +186,14 @@ tr:last-child td,tr:last-child th{border-bottom:0}
     <button type="button" class="btn alt" id="reset">入力と写真をすべて消す</button>
   </div>
   <p class="msg" id="expmsg" aria-live="polite"></p>
+
+  <h2>ほかの端末のデータを合算する</h2>
+  <p class="lead">ほかの端末で書き出したファイルを選ぶと、この端末のデータに合算します。同じ項目に両方の入力がある場合は新しいほうを表示し、もう一方も「ほかの入力」として残します。写真は全員分が残ります。</p>
+  <div class="actions">
+    <input class="fileinput" type="file" id="impfile" accept=".zip,application/zip">
+    <label class="btn" for="impfile">書き出しファイルを選ぶ</label>
+  </div>
+  <p class="msg" id="impmsg" aria-live="polite"></p>
 </div>
 
 <div class="viewer hidden" id="viewer" role="dialog" aria-modal="true" aria-label="写真と動画の表示">
@@ -335,11 +351,13 @@ var CMP_ROWS = [
 ];
 
 /* ---------- state ---------- */
-var APP_VERSION = "3";
+var APP_VERSION = "4";
 var LS = "gencho-jkt-2026-local";
 var state = {};      // pid -> {i:{iid:{d,v,f}}, note, rank}
 var filter = "all", openId = null, saveOk = true, idb = null;
 var mirrorTimer = null, mirrorVal = null;
+var who = "";
+try{ who = localStorage.getItem(LS + "-who") || ""; }catch(e){}
 
 function loadLocal(){
   try{
@@ -459,6 +477,7 @@ function addEntry(pid, iid, entry){
   var s = st(pid), c = JSON.parse(JSON.stringify(s.i[iid] || {}));
   if (!Array.isArray(c.f)) c.f = [];
   entry.a = Date.now();
+  entry.by = who;
   c.f.push(entry);
   s.i[iid] = c;
   changed(pid);
@@ -661,7 +680,7 @@ function buildRow(pl, item){
     b.addEventListener("click", function(){
       var s = st(pl.id); var c = JSON.parse(JSON.stringify(s.i[item.id] || {}));
       c.d = !c.d;
-      if (c.d) c.dt = Date.now(); else delete c.dt;
+      if (c.d) { c.dt = Date.now(); c.by = who; } else { delete c.dt; delete c.by; }
       s.i[item.id] = c;
       changed(pl.id);
     });
@@ -675,12 +694,15 @@ function buildRow(pl, item){
     var inp = el("input"); inp.type = "text"; inp.id = fid; inp.autocomplete = "off";
     if (item.t === M) inp.inputMode = "decimal";
     inp.addEventListener("input", function(){
-      st(pl.id).i[item.id] = {v: inp.value, vt: Date.now()};
+      var pc = cell(pl.id, item.id), nc = {v: inp.value, vt: Date.now(), by: who};
+      if (Array.isArray(pc.alt)) nc.alt = pc.alt;
+      st(pl.id).i[item.id] = nc;
       changed(pl.id);
     });
     if (item.u){
       var wrap = el("div", "inline"); wrap.appendChild(inp); wrap.appendChild(el("span", null, item.u)); f.appendChild(wrap);
     } else f.appendChild(inp);
+    f.appendChild(el("div", "alt"));
     row.appendChild(f);
   }
   return row;
@@ -722,9 +744,13 @@ function refresh(pid){
     if (item.t === P) {
       ctl.setAttribute("aria-pressed", d ? "true" : "false");
       var wh = row.querySelector(".when");
-      if (wh) wh.textContent = (d && cell(pid, item.id).dt) ? fmtTime(cell(pid, item.id).dt) : "";
+      var pcl = cell(pid, item.id);
+      if (wh) wh.textContent = (d && pcl.dt) ? fmtTime(pcl.dt) + (pcl.by && pcl.by !== who ? " " + pcl.by : "") : "";
+    } else {
+      var al = row.querySelector(".alt"), alts = cell(pid, item.id).alt;
+      if (al) al.textContent = (Array.isArray(alts) && alts.length) ? "ほかの入力: " + alts.map(function(a){ return a.v + "(" + [a.by || "", fmtTime(a.vt)].filter(Boolean).join(" ") + ")"; }).join("、") : "";
     }
-    else if (document.activeElement !== ctl && ctl.value !== val(pid, item.id)) ctl.value = val(pid, item.id);
+    if (item.t !== P && document.activeElement !== ctl && ctl.value !== val(pid, item.id)) ctl.value = val(pid, item.id);
   });
   var ta = document.getElementById("note-" + pid);
   var note = st(pid).note || "";
@@ -792,13 +818,13 @@ function tables(){
 }
 function expName(pid, iid, idx){ return pid + "_" + (iid === "_x" ? "other" : iid) + "_" + (idx + 1) + ".jpg"; }
 function fileData(){
-  var rows = [["場所", "項目", "ファイル名", "日時", "保存先", "書き出し名", "追加した時刻"]];
+  var rows = [["場所", "項目", "ファイル名", "日時", "保存先", "書き出し名", "追加した時刻", "記録者"]];
   PLACES.forEach(function(pl){
     var label = pl.name + (pl.venue && val(pl.id, "name") ? " " + val(pl.id, "name") : "");
     pl.items.filter(function(x){ return x.t === P; }).concat([{id:"_x", l:"そのほか"}]).forEach(function(item){
       files(pl.id, item.id).forEach(function(x, idx){
         if (!x) return;
-        rows.push([label, item.l, x.n || "(名前なし)", fmtTime(x.t), okId(x.id) ? "アプリ内" : "カメラロールのみ", okId(x.id) ? "photos/" + expName(pl.id, item.id, idx) : "", fmtFull(x.a)]);
+        rows.push([label, item.l, x.n || "(名前なし)", fmtTime(x.t), okId(x.id) ? "アプリ内" : "カメラロールのみ", okId(x.id) ? "photos/" + expName(pl.id, item.id, idx) : "", fmtFull(x.a), x.by || ""]);
       });
     });
   });
@@ -843,15 +869,15 @@ function tsv(rows){
   return "﻿" + rows.map(function(r){ return r.map(function(c){ return String(c == null ? "" : c).replace(/[\t\r\n]+/g, " "); }).join("\t"); }).join("\r\n");
 }
 function answerData(){
-  var rows = [["場所", "区分", "項目", "入力", "済", "記録時刻"]];
+  var rows = [["場所", "区分", "項目", "入力", "済", "記録時刻", "記録者", "ほかの入力"]];
   PLACES.forEach(function(pl){
     var label = pl.name + (pl.venue && val(pl.id, "name") ? " " + val(pl.id, "name") : "");
     pl.items.forEach(function(item){
       var ce = cell(pl.id, item.id);
-      rows.push([label, item.g || GROUP_NAME[item.t], item.l, item.t === P ? "" : val(pl.id, item.id), isDone(pl.id, item) ? "済" : "", fmtFull(item.t === P ? ce.dt : ce.vt)]);
+      rows.push([label, item.g || GROUP_NAME[item.t], item.l, item.t === P ? "" : val(pl.id, item.id), isDone(pl.id, item) ? "済" : "", fmtFull(item.t === P ? ce.dt : ce.vt), ce.by || "", (Array.isArray(ce.alt) ? ce.alt : []).map(function(a){ return a.v + "(" + (a.by || "") + " " + fmtFull(a.vt) + ")"; }).join(" / ")]);
     });
-    if (pl.venue) rows.push([label, "推薦順", "推薦順", RANK[st(pl.id).rank] || "", "", ""]);
-    rows.push([label, "所感", "所感", st(pl.id).note || "", "", ""]);
+    if (pl.venue) rows.push([label, "推薦順", "推薦順", RANK[st(pl.id).rank] || "", "", "", "", ""]);
+    rows.push([label, "所感", "所感", st(pl.id).note || "", "", "", "", ""]);
   });
   return rows;
 }
@@ -904,7 +930,7 @@ document.getElementById("expmake").addEventListener("click", function(){
   document.getElementById("expsend").classList.add("hidden");
   document.getElementById("explink").classList.add("hidden");
   var zip = new JSZip();
-  zip.file("data.json", JSON.stringify({app:"gencho-jkt-2026", version:APP_VERSION, exported:new Date().toISOString(), state:state}, null, 1));
+  zip.file("data.json", JSON.stringify({app:"gencho-jkt-2026", version:APP_VERSION, who:who, exported:new Date().toISOString(), state:state}, null, 1));
   zip.file("answers.tsv", tsv(answerData()));
   zip.file("venues.tsv", tsv(cmpData()));
   zip.file("places.tsv", tsv(summaryData()));
@@ -926,7 +952,8 @@ document.getElementById("expmake").addEventListener("click", function(){
   }).then(function(blob){
     var d = new Date();
     function z(n){ return (n < 10 ? "0" : "") + n; }
-    var name = "gencho-jakarta-" + d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate()) + "-" + z(d.getHours()) + z(d.getMinutes()) + ".zip";
+    var wn = who.replace(/[\\\/:*?"<>|\s]+/g, "");
+    var name = "gencho-jakarta-" + (wn ? wn + "-" : "") + d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate()) + "-" + z(d.getHours()) + z(d.getMinutes()) + ".zip";
     if (exported && exported.url) URL.revokeObjectURL(exported.url);
     exported = {blob:blob, name:name, url:URL.createObjectURL(blob)};
     var a = document.getElementById("explink"); a.href = exported.url; a.download = name; a.classList.remove("hidden");
@@ -958,6 +985,111 @@ document.getElementById("reset").addEventListener("click", function(){
   PLACES.forEach(function(pl){ cardEls[pl.id].querySelectorAll("[data-media]").forEach(function(b){ b.dataset.sig = ""; b.querySelector(".thumbs").textContent = ""; }); refresh(pl.id); });
   showStatus();
   setExpMsg("すべて消しました。");
+});
+
+/* ---------- recorder name ---------- */
+(function(){
+  var wi = document.getElementById("who");
+  wi.value = who;
+  wi.addEventListener("input", function(){
+    who = wi.value.trim().slice(0, 20);
+    try{ localStorage.setItem(LS + "-who", who); }catch(e){}
+  });
+})();
+
+/* ---------- import and merge ---------- */
+function mergeState(remote, rwho){
+  var stats = {items:0, photos:[]};
+  PLACES.forEach(function(pl){
+    var r = remote[pl.id]; if (!r || typeof r !== "object") return;
+    var s = st(pl.id), ri = (r.i && typeof r.i === "object") ? r.i : {};
+    pl.items.concat([{id:"_x", t:P}]).forEach(function(item){
+      var rc = ri[item.id]; if (!rc || typeof rc !== "object") return;
+      var lc = JSON.parse(JSON.stringify(s.i[item.id] || {})), touched = false;
+      if (item.t === P) {
+        if (rc.d && !lc.d) { lc.d = true; lc.dt = +rc.dt || 0; lc.by = String(rc.by || rwho); touched = true; }
+        var rf = Array.isArray(rc.f) ? rc.f : [];
+        if (rf.length) {
+          if (!Array.isArray(lc.f)) lc.f = [];
+          var have = {}; lc.f.forEach(function(x){ have[fkey(x)] = true; });
+          rf.forEach(function(x, idx){
+            if (!x || typeof x !== "object" || have[fkey(x)]) return;
+            var e = {k: x.k === "v" ? "v" : "i", n: String(x.n || ""), t: +x.t || 0, sz: +x.sz || 0, a: +x.a || 0, by: String(x.by || rwho)};
+            if (okId(x.id)) { e.id = String(x.id); stats.photos.push({id:e.id, path:"photos/" + expName(pl.id, item.id, idx)}); }
+            else e.r = 1;
+            lc.f.push(e); have[fkey(e)] = true; touched = true;
+          });
+        }
+      } else {
+        var rv = typeof rc.v === "string" ? rc.v : "";
+        var lv = typeof lc.v === "string" ? lc.v : "";
+        var alts = (Array.isArray(lc.alt) ? lc.alt : []).slice();
+        var addAlt = function(a){
+          if (!a.v || !a.v.trim() || a.v === lc.v) return;
+          for (var k = 0; k < alts.length; k++) if (alts[k].v === a.v && alts[k].by === a.by) return;
+          alts.push(a); touched = true;
+        };
+        if (rv.trim() && rv !== lv) {
+          if (!lv.trim() || (+rc.vt || 0) > (+lc.vt || 0)) {
+            var old = {v: lv, vt: +lc.vt || 0, by: String(lc.by || who)};
+            lc.v = rv; lc.vt = +rc.vt || 0; lc.by = String(rc.by || rwho);
+            alts = alts.filter(function(a){ return a.v !== rv; });
+            addAlt(old);
+            touched = true;
+          } else addAlt({v: rv, vt: +rc.vt || 0, by: String(rc.by || rwho)});
+        }
+        (Array.isArray(rc.alt) ? rc.alt : []).forEach(function(a){
+          if (a && typeof a.v === "string") addAlt({v: a.v, vt: +a.vt || 0, by: String(a.by || "")});
+        });
+        if (alts.length) lc.alt = alts; else delete lc.alt;
+      }
+      if (touched) { s.i[item.id] = lc; stats.items++; }
+    });
+    var rn = typeof r.note === "string" ? r.note.trim() : "";
+    if (rn && (s.note || "").indexOf(rn) < 0) s.note = (s.note && s.note.trim()) ? s.note + "\n[" + rwho + "] " + rn : rn;
+    if (!s.rank && typeof r.rank === "string" && RANK[r.rank]) s.rank = r.rank;
+    if (Array.isArray(r.o)) {
+      var set = {};
+      (Array.isArray(s.o) ? s.o : []).concat(r.o).forEach(function(t){ if (+t) set[+t] = 1; });
+      s.o = Object.keys(set).map(Number).sort(function(a, b){ return a - b; });
+      if (s.o.length > 30) s.o.splice(1, s.o.length - 30);
+    }
+  });
+  return stats;
+}
+document.getElementById("impfile").addEventListener("change", function(){
+  var inp = this, f = inp.files && inp.files[0], msg = document.getElementById("impmsg");
+  inp.value = "";
+  if (!f) return;
+  if (typeof JSZip === "undefined") { msg.textContent = "読み込みの部品を読み込めていません。電波のある場所で一度開き直してください。"; return; }
+  msg.textContent = "読み込んでいます";
+  JSZip.loadAsync(f).then(function(zip){
+    var dj = zip.file("data.json");
+    if (!dj) throw new Error("nodata");
+    return dj.async("string").then(function(txt){
+      var d = JSON.parse(txt);
+      if (!d || d.app !== "gencho-jkt-2026" || !d.state || typeof d.state !== "object") throw new Error("nodata");
+      var rwho = String(d.who || "").slice(0, 20) || "別端末";
+      var stats = mergeState(d.state, rwho), i = 0, saved = 0;
+      function next(){
+        if (i >= stats.photos.length) return Promise.resolve();
+        var p = stats.photos[i++], zf = zip.file(p.path);
+        msg.textContent = "写真を読み込んでいます " + i + "/" + stats.photos.length;
+        if (!zf || !idb) return next();
+        return zf.async("arraybuffer").then(function(buf){
+          return idbPut("files", p.id, {buf:buf, type:"image/jpeg"}).then(function(){ saved++; });
+        }).then(null, function(){}).then(next);
+      }
+      return next().then(function(){
+        saveLocal();
+        PLACES.forEach(function(pl){ refresh(pl.id); });
+        showStatus();
+        msg.textContent = rwho + " のデータを合算しました(項目" + stats.items + "件、写真" + saved + "枚)。";
+      });
+    });
+  }).then(null, function(){
+    msg.textContent = "読み込めませんでした。このアプリで書き出したファイルを選んでください。";
+  });
 });
 
 /* ---------- start ---------- */
