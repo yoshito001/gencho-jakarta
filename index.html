@@ -334,7 +334,7 @@ var CMP_ROWS = [
 ];
 
 /* ---------- state ---------- */
-var APP_VERSION = "1";
+var APP_VERSION = "2";
 var LS = "gencho-jkt-2026-local";
 var state = {};      // pid -> {i:{iid:{d,v,f}}, note, rank}
 var filter = "all", openId = null, saveOk = true, idb = null;
@@ -692,7 +692,11 @@ function toggle(pid){
     c.querySelector(".head").setAttribute("aria-expanded", on ? "true" : "false");
   });
   PLACES.forEach(function(pl){ if (pl.id !== openId) closeMedia(pl.id); });
-  if (openId) { renderMedia(openId); cardEls[openId].scrollIntoView({block:"start", behavior:"auto"}); }
+  if (openId) {
+    renderMedia(openId);
+    var top = cardEls[openId].getBoundingClientRect().top + window.pageYOffset - document.querySelector("header.top").offsetHeight - 8;
+    window.scrollTo(0, Math.max(0, top));
+  }
   applyFilter();
 }
 function refresh(pid){
