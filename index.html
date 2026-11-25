@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="現調チェック">
+<meta name="theme-color" content="#223a63">
+<meta name="robots" content="noindex,nofollow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>ジャカルタ現調チェック</title>
+<style>
+:root{
+  /* layout: one column of place cards under a sticky progress bar; the report tables sit at the end */
+  --bg:#f2f4f8; --surface:#ffffff; --ink:#18233a; --muted:#5d6880; --line:#d5dbe6;
+  --accent:#223a63; --accent-ink:#ffffff;
+  --done:#1f7a4d; --done-bg:#e3f3ea; --warn:#a65a00; --warn-bg:#fdefd8;
+  --font:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#101726; --surface:#1a2336; --ink:#e8ecf5; --muted:#9aa6bf; --line:#2e3a54;
+    --accent:#8fb0ea; --accent-ink:#0e1626;
+    --done:#6fd3a0; --done-bg:#173a2b; --warn:#f0b866; --warn-bg:#3d2d10;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#101726; --surface:#1a2336; --ink:#e8ecf5; --muted:#9aa6bf; --line:#2e3a54;
+  --accent:#8fb0ea; --accent-ink:#0e1626;
+  --done:#6fd3a0; --done-bg:#173a2b; --warn:#f0b866; --warn-bg:#3d2d10;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.55}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px 64px}
+header.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 0 10px;border-bottom:1px solid var(--line)}
+.titleline{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.02em}
+.status{font-size:12px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+button.status{cursor:pointer}
+.status.warn{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+.status.ok{background:var(--done-bg);color:var(--done);border-color:transparent}
+.bar{height:8px;border-radius:999px;background:var(--line);margin:10px 0 6px;overflow:hidden}
+.bar > i{display:block;height:100%;width:0;background:var(--done);transition:width .2s}
+@media (prefers-reduced-motion: reduce){.bar > i{transition:none}}
+.barline{display:flex;justify-content:space-between;gap:12px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.chips{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.chip{min-height:36px;padding:4px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tip{font-size:13px;color:var(--muted);margin:14px 0 4px}
+.cards{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.card.complete{border-color:var(--done)}
+.head{width:100%;display:flex;align-items:center;gap:10px;padding:14px;background:none;border:0;text-align:left;cursor:pointer;min-height:56px}
+.head .name{flex:1;font-weight:700;font-size:16px;min-width:0}
+.head .sub{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.badge{font-size:11px;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.badge.must{background:var(--accent);color:var(--accent-ink)}
+.badge.opt{border:1px solid var(--line);color:var(--muted)}
+.count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.card.complete .count{color:var(--done);font-weight:700}
+.chev{width:10px;height:10px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 4px 4px 2px;flex:none}
+.card.open .chev{transform:rotate(-135deg);margin:4px 4px 0 2px}
+.body{display:none;padding:0 14px 14px;border-top:1px solid var(--line)}
+.card.open .body{display:block}
+.first{font-size:13px;color:var(--muted);margin:10px 0 0}
+.group{margin-top:14px}
+.glabel{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;margin-bottom:6px}
+.rows{display:flex;flex-direction:column;gap:6px}
+.row{border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.row.done{background:var(--done-bg);border-color:transparent}
+.tap{width:100%;display:flex;align-items:center;gap:12px;padding:12px;background:none;border:0;text-align:left;cursor:pointer;min-height:52px}
+.box{width:26px;height:26px;border-radius:50%;border:2px solid var(--muted);flex:none;display:grid;place-items:center}
+.row.done .box{background:var(--done);border-color:var(--done)}
+.row.done .box::after{content:"";width:11px;height:6px;border-left:3px solid var(--surface);border-bottom:3px solid var(--surface);transform:rotate(-45deg) translate(1px,-1px)}
+.field{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px}
+.field label{font-size:14px}
+.inline{display:flex;align-items:center;gap:8px}
+.inline span{font-size:13px;color:var(--muted);white-space:nowrap}
+input[type="text"],textarea,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:16px}
+textarea{min-height:76px;resize:vertical}
+.opttag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 5px;margin-left:6px;white-space:nowrap}
+h2{font-size:17px;margin:34px 0 4px}
+.lead{font-size:13px;color:var(--muted);margin:0 0 10px}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:13px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+thead th{background:var(--bg);font-size:12px;color:var(--muted)}
+tbody th{font-weight:400;color:var(--muted);width:150px}
+tr:last-child td,tr:last-child th{border-bottom:0}
+.actions{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.btn{min-height:44px;padding:8px 16px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.msg{font-size:13px;color:var(--muted)}
+.btn.alt{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.5}
+.mediawrap{padding:0 12px 10px}
+.media{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.thumbs{display:contents}
+.thumb{width:72px;height:72px;border-radius:8px;border:1px solid var(--line);overflow:hidden;padding:0;background:var(--surface);cursor:pointer;display:grid;place-items:center;font-size:12px;color:var(--muted)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb.rec{border-style:dashed;padding:4px;text-align:center;line-height:1.3}
+.fig{width:72px}
+.cap{font-size:10px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere;line-height:1.3}
+.vname,.vnote{color:#ffffff;font-size:14px;text-align:center;overflow-wrap:anywhere}
+.add{display:none;align-items:center;min-height:44px;padding:6px 14px;border-radius:8px;border:1px dashed var(--muted);cursor:pointer;font-size:14px;color:var(--muted)}
+.has-assets .add{display:inline-flex}
+.fileinput{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.fileinput:focus-visible + .add{outline:3px solid var(--accent);outline-offset:2px}
+.upmsg{font-size:12px;color:var(--warn);margin-top:6px}
+.upmsg:empty{display:none}
+.viewer{position:fixed;inset:0;z-index:20;background:rgba(10,14,24,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px}
+.viewer .stage{flex:1;min-height:0;width:100%;display:grid;place-items:center}
+.viewer img,.viewer video{max-width:100%;max-height:100%;object-fit:contain}
+.viewer .vbtns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.btn.ghost{background:transparent;color:#ffffff;border-color:#ffffff}
+.btn.danger{background:#b3261e;border-color:#b3261e;color:#ffffff}
+.hidden{display:none !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="titleline">
+      <h1>ジャカルタ現調チェック</h1>
+      <span class="status" id="status">読み込み中</span>
+    </div>
+    <div class="bar" aria-hidden="true"><i id="barfill"></i></div>
+    <div class="barline"><span id="mustline">必須 0/0</span><span id="allline">全体 0/0</span></div>
+    <div class="chips" role="group" aria-label="表示の絞り込み">
+      <button type="button" class="chip" data-f="all" aria-pressed="true">すべて</button>
+      <button type="button" class="chip" data-f="must" aria-pressed="false">必須のみ</button>
+      <button type="button" class="chip" data-f="todo" aria-pressed="false">未完了のみ</button>
+    </div>
+  </header>
+
+  <p class="tip hidden" id="hint"></p>
+  <p class="tip">12月3日から6日。場所に着いたらカードを開き、最初に看板か入口を1枚撮ってください。写真はカメラアプリで撮ってから、各項目の下の「写真と動画を追加」でカメラロールから選ぶと、元のファイル名が残ります。動画はファイル名だけを記録します。入力と写真はこの端末の中だけに保存されます。</p>
+
+  <div class="cards" id="cards"></div>
+
+  <h2>懇親会候補の比較</h2>
+  <p class="lead">候補カードに入力した内容がここに並びます。帰国後の報告にそのまま使えます。</p>
+  <div class="scroll"><table id="cmp"></table></div>
+  <div class="actions">
+    <button type="button" class="btn" id="copy">比較表をコピー</button>
+    <span class="msg" id="copymsg"></span>
+  </div>
+
+  <h2>そのほかの場所の要点</h2>
+  <p class="lead">所要時間と所感を場所ごとにまとめます。</p>
+  <div class="scroll"><table id="sum"></table></div>
+
+  <h2>写真と動画の一覧</h2>
+  <p class="lead">追加したファイルの名前を、場所と項目ごとに並べます。カメラロールの元データと照らし合わせるときに使えます。</p>
+  <div class="scroll"><table id="flist"></table></div>
+  <div class="actions">
+    <button type="button" class="btn" id="copyf">一覧をコピー</button>
+    <span class="msg" id="copyfmsg"></span>
+  </div>
+
+  <h2>書き出し</h2>
+  <p class="lead">入力内容と写真を1つのファイルにまとめます。帰国後、このファイルをClaudeの会話に添付すると報告書の下書きに使えます。現地でも1日の終わりに書き出しておくと控えになります。</p>
+  <div class="actions">
+    <button type="button" class="btn" id="expmake">書き出しファイルをつくる</button>
+    <button type="button" class="btn hidden" id="expsend">保存または送信</button>
+    <a class="msg hidden" id="explink" href="#">リンクから保存</a>
+  </div>
+  <div class="actions">
+    <button type="button" class="btn alt" id="expcopy">入力内容だけコピー</button>
+    <button type="button" class="btn alt" id="reset">入力と写真をすべて消す</button>
+  </div>
+  <p class="msg" id="expmsg" aria-live="polite"></p>
+</div>
+
+<div class="viewer hidden" id="viewer" role="dialog" aria-modal="true" aria-label="写真と動画の表示">
+  <div class="stage" id="vstage"></div>
+  <div class="vname" id="vname"></div>
+  <div class="vbtns">
+    <button type="button" class="btn ghost" id="vclose">閉じる</button>
+    <button type="button" class="btn danger" id="vdel">削除</button>
+  </div>
+</div>
+
+<script src="jszip.min.js"></script>
+<script>
+"use strict";
+var P = "p", M = "m", Q = "q";
+function it(id, t, l, extra){ var o = {id:id, t:t, l:l}; if (extra) for (var k in extra) o[k] = extra[k]; return o; }
+
+function venueItems(){
+  return [
+    it("name", Q, "店名", {g:"基本"}),
+    it("band", Q, "予算帯(1万円程度、2万円程度)", {g:"基本"}),
+    it("ext", P, "外観と入口"),
+    it("room", P, "部屋の全景"),
+    it("food", P, "料理"),
+    it("mic", P, "マイクと設備"),
+    it("drop", P, "乗降場所"),
+    it("time", M, "HQからの移動時間(夕方に実測)", {u:"分"}),
+    it("price", M, "1人あたりの総額(お酒、税サービス料込み)", {u:"ルピア"}),
+    it("avail", Q, "3月29日(月)夜に50から60名で予約できるか"),
+    it("private", Q, "個室か貸切にできるか"),
+    it("micq", Q, "マイクの本数"),
+    it("drink", Q, "飲み放題の内容と時間"),
+    it("min", Q, "最低保証"),
+    it("depo", Q, "デポジット"),
+    it("cancel", Q, "キャンセル規定"),
+    it("pay", Q, "支払い方法と領収書"),
+    it("smoke", Q, "喫煙場所"),
+    it("halal", Q, "ハラルとアレルギーの対応"),
+    it("hold", Q, "仮押さえの可否と期限"),
+    it("staff", Q, "店の担当者と連絡先"),
+    it("a_name", Q, "二次会の店名", {g:"二次会"}),
+    it("a_time", M, "懇親会会場からの移動時間", {u:"分", g:"二次会"}),
+    it("a_hours", Q, "営業時間とラストオーダー", {g:"二次会"}),
+    it("a_book", Q, "予約の可否と入れる人数", {g:"二次会"}),
+    it("a_smoke", Q, "喫煙の可否", {g:"二次会"}),
+    it("a_price", Q, "料金の目安", {g:"二次会"})
+  ];
+}
+function golfItems(){
+  return [
+    it("front", P, "チェックイン、フロント"),
+    it("cloak", P, "クローク"),
+    it("shower", P, "シャワー室とタオル"),
+    it("wc", P, "トイレ"),
+    it("route", P, "到着からスタートまでの動線(動画)"),
+    it("lunch", P, "昼食"),
+    it("time", M, "HQからの所要時間(朝の時間帯)", {u:"分"}),
+    it("rental", Q, "レンタルクラブとシューズの本数、料金"),
+    it("tip", Q, "キャディのチップ、支払い方法"),
+    it("dress", Q, "ドレスコード"),
+    it("rain", Q, "雷雨中断時の待機場所")
+  ];
+}
+
+var PLACES = [
+  {id:"airport_in", name:"空港(到着)", must:true, items:[
+    it("route", P, "到着ゲートから出口までの動線(動画)"),
+    it("wc", P, "トイレ"),
+    it("ride", P, "乗り場(シャトルバス、Grab)"),
+    it("meet", P, "受け入れ場所(集合場所)"),
+    it("smoke", P, "喫煙所"),
+    it("money", P, "両替、ATM、SIM売場"),
+    it("imm", M, "入国の所要時間(到着カード、Visa)", {u:"分"}),
+    it("bag", M, "荷物受取から出口までの時間", {u:"分"}),
+    it("flight", Q, "搭乗した便名と到着時刻"),
+    it("term", Q, "本番の便と同じターミナルか")
+  ]},
+  {id:"transfer", name:"空港からホテル", must:true, items:[
+    it("time", M, "ホテルまでの所要時間", {u:"分"}),
+    it("jam", Q, "渋滞の程度と時間帯")
+  ]},
+  {id:"hq", name:"HQスイスホテル", must:true, items:[
+    it("room", P, "客室"),
+    it("checkin", P, "チェックイン場所"),
+    it("wc", P, "ロビーのトイレ"),
+    it("shower", P, "標準客室のシャワーの目隠し"),
+    it("desk", P, "ロビーとボールルーム前(日本側受付の設置場所)"),
+    it("smoke", P, "喫煙所"),
+    it("twin", Q, "ツインの有無"),
+    it("cat", Q, "部屋カテゴリーの正式名称"),
+    it("bf", Q, "朝食会場と開始時刻"),
+    it("bag", Q, "ゴルフバッグの預かり")
+  ]},
+  {id:"v1", name:"懇親会 候補1", must:true, venue:true, items:venueItems()},
+  {id:"v2", name:"懇親会 候補2", must:true, venue:true, items:venueItems()},
+  {id:"v3", name:"懇親会 候補3", must:true, venue:true, items:venueItems()},
+  {id:"v4", name:"懇親会 候補4", must:true, venue:true, items:venueItems()},
+  {id:"golf1", name:"ゴルフ場 Sedayu Indo Golf", sub:"本番3月29日", must:true, items:golfItems()},
+  {id:"golf2", name:"ゴルフ場 Damai Indah Golf PIK", sub:"本番3月30日", must:true, items:golfItems()},
+  {id:"gala", name:"ガラパーティー会場", sub:"Angke Heritage(PIK2)", must:true, items:[
+    it("hall", P, "会場の広さと席の配置"),
+    it("wc", P, "トイレ、喫煙所"),
+    it("drop", P, "乗降場所"),
+    it("time", M, "HQからの移動時間", {u:"分"}),
+    it("back", Q, "帰りの移動手段(シャトルバスの有無)"),
+    it("food", Q, "食事の感想", {opt:true})
+  ]},
+  {id:"hospital", name:"病院", must:true, items:[
+    it("ext", P, "外観と入口"),
+    it("time", M, "HQからの所要時間", {u:"分"}),
+    it("name", Q, "病院の名称と場所"),
+    it("lang", Q, "日本語か英語の対応"),
+    it("h24", Q, "24時間対応の有無"),
+    it("pay", Q, "支払い方法(カード、海外旅行保険のキャッシュレス対応)")
+  ]},
+  {id:"conf", name:"会議会場", must:false, items:[
+    it("hall", P, "会場"),
+    it("route", P, "受付から会場入口までの動線(動画)"),
+    it("wc", P, "トイレ、控室")
+  ]},
+  {id:"mercure", name:"メルキュールホテル", must:false, items:[
+    it("room", P, "部屋", {opt:true}),
+    it("time", M, "HQからの徒歩時間", {u:"分"})
+  ]},
+  {id:"mall", name:"隣接ショッピングモール", must:false, items:[
+    it("massage", P, "マッサージ店"),
+    it("wc", P, "トイレ"),
+    it("gift", P, "お土産店"),
+    it("money", P, "両替所、薬局、コンビニ"),
+    it("jfood", P, "日本食の店")
+  ]},
+  {id:"sight", name:"観光地", must:false, items:[
+    it("mosque", P, "モスク"),
+    it("tower", P, "タワー"),
+    it("time", M, "HQからモスクまでの所要時間", {u:"分"}),
+    it("time2", M, "HQからタワーまでの所要時間", {u:"分"}),
+    it("rule", Q, "服装の制限と入場料")
+  ]},
+  {id:"airport_out", name:"空港(出発)", must:true, items:[
+    it("drop", P, "車の降車場所"),
+    it("route", P, "チェックインから搭乗口までの動線(動画)"),
+    it("wc", P, "トイレ"),
+    it("smoke", P, "喫煙所(中と外)"),
+    it("cafe", P, "カフェなど"),
+    it("time", M, "チェックインから搭乗口までの所要時間", {u:"分"}),
+    it("crowd", Q, "混雑状況")
+  ]}
+];
+var GROUP_NAME = {p:"撮る", m:"計る", q:"聞く"};
+var CMP_ROWS = [
+  ["name","店名"],["band","予算帯"],["price","1人あたりの総額(ルピア)"],["time","HQからの移動時間(分)"],
+  ["avail","3月29日夜の予約"],["private","個室か貸切"],["drink","飲み放題"],["micq","マイク"],
+  ["min","最低保証"],["depo","デポジット"],["cancel","キャンセル規定"],["hold","仮押さえ"],
+  ["a_name","二次会の店"],["a_time","二次会までの移動(分)"]
+];
+
+/* ---------- state ---------- */
+var APP_VERSION = "1";
+var LS = "gencho-jkt-2026-local";
+var state = {};      // pid -> {i:{iid:{d,v,f}}, note, rank}
+var filter = "all", openId = null, saveOk = true, idb = null;
+var mirrorTimer = null, mirrorVal = null;
+
+function loadLocal(){
+  try{
+    var raw = localStorage.getItem(LS);
+    if (!raw) return false;
+    var o = JSON.parse(raw);
+    if (o && o.state) state = o.state;
+    if (o && o.open) openId = o.open;
+    return true;
+  }catch(e){ return false; }
+}
+function mirror(s){
+  mirrorVal = s;
+  if (!idb) return;
+  clearTimeout(mirrorTimer);
+  mirrorTimer = setTimeout(function(){
+    idbPut("kv", "state", mirrorVal).then(function(){ if (!saveOk) { saveOk = true; showStatus(); } }, function(){});
+  }, 800);
+}
+function saveLocal(){
+  var s = JSON.stringify({state:state, open:openId});
+  try{ localStorage.setItem(LS, s); saveOk = true; }catch(e){ saveOk = false; }
+  mirror(s);
+}
+function st(pid){ if (!state[pid]) state[pid] = {i:{}, note:"", rank:""}; if (!state[pid].i) state[pid].i = {}; return state[pid]; }
+function cell(pid, iid){ var s = st(pid); return s.i[iid] || {}; }
+function val(pid, iid){ var c = cell(pid, iid); return typeof c.v === "string" ? c.v : ""; }
+function isDone(pid, item){
+  var c = cell(pid, item.id);
+  if (item.t === P) return !!c.d || (Array.isArray(c.f) && c.f.length > 0);
+  return typeof c.v === "string" && c.v.trim() !== "";
+}
+function files(pid, iid){ var c = cell(pid, iid); return Array.isArray(c.f) ? c.f : []; }
+
+/* ---------- device storage ---------- */
+function openDb(){
+  return new Promise(function(res, rej){
+    var r;
+    try{ r = indexedDB.open("gencho-jkt-2026", 1); }catch(e){ rej(e); return; }
+    r.onupgradeneeded = function(){
+      var d = r.result;
+      if (!d.objectStoreNames.contains("files")) d.createObjectStore("files");
+      if (!d.objectStoreNames.contains("kv")) d.createObjectStore("kv");
+    };
+    r.onsuccess = function(){ res(r.result); };
+    r.onerror = function(){ rej(r.error); };
+  });
+}
+function idbPut(store, key, value){
+  return new Promise(function(res, rej){
+    var tx = idb.transaction(store, "readwrite");
+    tx.objectStore(store).put(value, key);
+    tx.oncomplete = function(){ res(); };
+    tx.onerror = tx.onabort = function(){ rej(tx.error); };
+  });
+}
+function idbGet(store, key){
+  return new Promise(function(res, rej){
+    var rq = idb.transaction(store).objectStore(store).get(key);
+    rq.onsuccess = function(){ res(rq.result); };
+    rq.onerror = function(){ rej(rq.error); };
+  });
+}
+function idbDel(store, key){
+  return new Promise(function(res, rej){
+    var tx = idb.transaction(store, "readwrite");
+    tx.objectStore(store).delete(key);
+    tx.oncomplete = function(){ res(); };
+    tx.onerror = tx.onabort = function(){ rej(tx.error); };
+  });
+}
+function idbClear(store){
+  return new Promise(function(res, rej){
+    var tx = idb.transaction(store, "readwrite");
+    tx.objectStore(store).clear();
+    tx.oncomplete = function(){ res(); };
+    tx.onerror = tx.onabort = function(){ rej(tx.error); };
+  });
+}
+
+/* ---------- photos and videos ---------- */
+var urls = {};
+function isVideoFile(f){ return /^video\//.test(f.type) || /\.(mov|mp4|m4v|webm)$/i.test(f.name || ""); }
+function readBuf(blob){
+  return new Promise(function(res, rej){
+    var fr = new FileReader();
+    fr.onload = function(){ res(fr.result); };
+    fr.onerror = function(){ rej(fr.error); };
+    fr.readAsArrayBuffer(blob);
+  });
+}
+function shrink(f){
+  return new Promise(function(res, rej){
+    var url = URL.createObjectURL(f), img = new Image();
+    img.onload = function(){
+      var w = img.naturalWidth, h = img.naturalHeight, sc = Math.min(1, 2000 / Math.max(w, h));
+      var c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(w * sc)); c.height = Math.max(1, Math.round(h * sc));
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(function(b){ if (b) res(b); else rej(new Error("encode")); }, "image/jpeg", 0.85);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); rej(new Error("decode")); };
+    img.src = url;
+  });
+}
+function newId(){ return "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+function okId(id){ return /^[A-Za-z0-9_-]{8,64}$/.test(String(id || "")); }
+function fkey(x){ return x && x.id ? String(x.id) : "r:" + (x && x.n) + ":" + (x && x.t); }
+function fmtTime(t){
+  if (!t) return "";
+  var d = new Date(t); if (isNaN(d.getTime())) return "";
+  function z(n){ return (n < 10 ? "0" : "") + n; }
+  return (d.getMonth() + 1) + "/" + d.getDate() + " " + z(d.getHours()) + ":" + z(d.getMinutes());
+}
+function addEntry(pid, iid, entry){
+  var s = st(pid), c = JSON.parse(JSON.stringify(s.i[iid] || {}));
+  if (!Array.isArray(c.f)) c.f = [];
+  c.f.push(entry);
+  s.i[iid] = c;
+  changed(pid);
+}
+function addFiles(pid, iid, fs, msg){
+  if (!fs.length) return;
+  var i = 0, notes = [];
+  function next(){
+    if (i >= fs.length) { msg.textContent = notes.join(" "); return; }
+    var f = fs[i++];
+    msg.textContent = "保存中 " + i + "/" + fs.length;
+    var base = {n: f.name || "", t: f.lastModified || 0, sz: f.size || 0};
+    if (isVideoFile(f)) {
+      addEntry(pid, iid, {k:"v", n:base.n, t:base.t, sz:base.sz, r:1});
+      if (notes.indexOf("動画はファイル名だけ記録しました。本体はカメラロールに残してください。") < 0) notes.push("動画はファイル名だけ記録しました。本体はカメラロールに残してください。");
+      next(); return;
+    }
+    if (!idb) {
+      addEntry(pid, iid, {k:"i", n:base.n, t:base.t, sz:base.sz, r:1});
+      notes.push((base.n ? base.n + " " : "") + "はファイル名だけ記録しました。");
+      next(); return;
+    }
+    shrink(f).then(readBuf).then(function(buf){
+      var id = newId();
+      return idbPut("files", id, {buf:buf, type:"image/jpeg"}).then(function(){
+        addEntry(pid, iid, {id:id, k:"i", n:base.n, t:base.t, sz:buf.byteLength});
+      });
+    }).then(null, function(){
+      addEntry(pid, iid, {k:"i", n:base.n, t:base.t, sz:base.sz, r:1});
+      notes.push((base.n ? base.n + " " : "") + "は端末に保存できなかったため、ファイル名だけ記録しました。");
+    }).then(next);
+  }
+  next();
+}
+function blobUrl(id){
+  if (urls[id]) return Promise.resolve(urls[id]);
+  if (!idb) return Promise.resolve(null);
+  return idbGet("files", id).then(function(r){
+    if (!r || !r.buf) return null;
+    var u = URL.createObjectURL(new Blob([r.buf], {type: r.type || "image/jpeg"}));
+    urls[id] = u;
+    return u;
+  }, function(){ return null; });
+}
+function buildMedia(pl, iid){
+  var wrap = el("div", "mediawrap");
+  var box = el("div", "media"); box.dataset.media = iid;
+  box.appendChild(el("div", "thumbs"));
+  var inp = el("input", "fileinput"); inp.type = "file"; inp.accept = "image/*,video/*"; inp.multiple = true;
+  inp.id = "up-" + pl.id + "-" + iid;
+  var add = el("label", "add", "写真と動画を追加"); add.htmlFor = inp.id;
+  var msg = el("div", "upmsg"); msg.setAttribute("aria-live", "polite");
+  inp.addEventListener("change", function(){
+    var fs = Array.prototype.slice.call(inp.files || []);
+    inp.value = "";
+    addFiles(pl.id, iid, fs, msg);
+  });
+  box.appendChild(inp); box.appendChild(add);
+  wrap.appendChild(box); wrap.appendChild(msg);
+  return wrap;
+}
+function renderMedia(pid){
+  Array.prototype.forEach.call(cardEls[pid].querySelectorAll("[data-media]"), function(box){
+    var iid = box.dataset.media, fs = files(pid, iid);
+    var sig = "s:" + fs.map(fkey).join(",");
+    if (box.dataset.sig === sig) return;
+    box.dataset.sig = sig;
+    var list = box.querySelector(".thumbs"); list.textContent = "";
+    fs.forEach(function(x){
+      if (!x) return;
+      var hasFile = okId(x.id);
+      if (!hasFile && !x.r) return;
+      var fig = el("div", "fig");
+      var b = el("button", "thumb"); b.type = "button";
+      if (!hasFile) { b.textContent = x.k === "v" ? "動画 記録のみ" : "写真 記録のみ"; b.classList.add("rec"); }
+      else {
+        var im = el("img"); im.alt = ""; b.appendChild(im);
+        blobUrl(x.id).then(function(u){ if (u) im.src = u; else { b.textContent = "写真なし"; b.classList.add("rec"); } });
+      }
+      b.setAttribute("aria-label", (x.k === "v" ? "動画" : "写真") + " " + (x.n || "") + " を開く");
+      b.addEventListener("click", function(){ openViewer(pid, iid, x); });
+      fig.appendChild(b);
+      if (x.n) fig.appendChild(el("div", "cap", x.n));
+      list.appendChild(fig);
+    });
+  });
+}
+function closeMedia(pid){
+  Array.prototype.forEach.call(cardEls[pid].querySelectorAll("[data-media]"), function(box){
+    if (!box.dataset.sig) return;
+    box.dataset.sig = "";
+    box.querySelector(".thumbs").textContent = "";
+    files(pid, box.dataset.media).forEach(function(x){
+      if (x && x.id && urls[x.id]) { URL.revokeObjectURL(urls[x.id]); delete urls[x.id]; }
+    });
+  });
+}
+var viewing = null;
+function openViewer(pid, iid, x){
+  viewing = {pid:pid, iid:iid, key:fkey(x), id: okId(x.id) ? x.id : null, armed:false};
+  var stage = document.getElementById("vstage"); stage.textContent = "";
+  if (!viewing.id) stage.appendChild(el("p", "vnote", "本体はカメラロールにあります"));
+  else {
+    var m = el("img"); m.alt = "写真"; stage.appendChild(m);
+    blobUrl(x.id).then(function(u){ if (u) m.src = u; });
+  }
+  document.getElementById("vname").textContent = [x.n || "", fmtTime(x.t)].filter(Boolean).join("  ");
+  document.getElementById("vdel").textContent = "削除";
+  document.getElementById("viewer").classList.remove("hidden");
+  document.getElementById("vclose").focus();
+}
+function closeViewer(){
+  document.getElementById("vstage").textContent = "";
+  document.getElementById("viewer").classList.add("hidden");
+  viewing = null;
+}
+
+/* ---------- saving ---------- */
+function changed(pid){
+  saveLocal();
+  refresh(pid);
+  showStatus();
+}
+function showStatus(){
+  var e = document.getElementById("status");
+  e.className = "status";
+  if (saveOk) { e.textContent = "この端末に保存済み"; e.classList.add("ok"); }
+  else { e.textContent = "保存できていません"; e.classList.add("warn"); }
+}
+
+
+/* ---------- build ---------- */
+var cardEls = {};
+function el(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+function build(){
+  var root = document.getElementById("cards");
+  PLACES.forEach(function(pl){
+    var card = el("section", "card"); card.dataset.pid = pl.id;
+    var head = el("button", "head"); head.type = "button";
+    head.setAttribute("aria-expanded", "false");
+    var name = el("span", "name", pl.name);
+    if (pl.sub) name.appendChild(el("span", "sub", pl.sub));
+    if (pl.venue) { var vs = el("span", "sub", ""); vs.dataset.role = "vname"; name.appendChild(vs); }
+    head.appendChild(name);
+    head.appendChild(el("span", "badge " + (pl.must ? "must" : "opt"), pl.must ? "必須" : "できれば"));
+    var cnt = el("span", "count", ""); cnt.dataset.role = "count"; head.appendChild(cnt);
+    head.appendChild(el("span", "chev"));
+    head.addEventListener("click", function(){ toggle(pl.id); });
+    card.appendChild(head);
+
+    var body = el("div", "body");
+    body.appendChild(el("p", "first", "最初に看板か入口を1枚撮る"));
+    var groups = [], byName = {};
+    pl.items.forEach(function(item){
+      var g = item.g || GROUP_NAME[item.t];
+      if (!byName[g]) { byName[g] = []; groups.push(g); }
+      byName[g].push(item);
+    });
+    groups.forEach(function(g){
+      var gw = el("div", "group");
+      gw.appendChild(el("div", "glabel", g));
+      var rows = el("div", "rows");
+      byName[g].forEach(function(item){ rows.appendChild(buildRow(pl, item)); });
+      gw.appendChild(rows); body.appendChild(gw);
+    });
+    if (pl.venue){
+      var rg = el("div", "group"); rg.appendChild(el("div", "glabel", "推薦順"));
+      var sel = el("select"); sel.id = "rank-" + pl.id; sel.setAttribute("aria-label", pl.name + "の推薦順");
+      [["","未定"],["1","1位"],["2","2位"],["3","3位"],["4","4位"],["x","条件を満たさない"]].forEach(function(o){
+        var op = el("option", null, o[1]); op.value = o[0]; sel.appendChild(op);
+      });
+      sel.addEventListener("change", function(){ st(pl.id).rank = sel.value; changed(pl.id); });
+      rg.appendChild(sel); body.appendChild(rg);
+    }
+    var xg = el("div", "group"); xg.appendChild(el("div", "glabel", "そのほかの写真と動画"));
+    var xr = el("div", "row"); xr.style.paddingTop = "10px"; xr.appendChild(buildMedia(pl, "_x"));
+    xg.appendChild(xr); body.appendChild(xg);
+    var ng = el("div", "group");
+    var nl = el("label", "glabel", "所感(報告に載せる一言)"); nl.htmlFor = "note-" + pl.id;
+    var ta = el("textarea"); ta.id = "note-" + pl.id;
+    ta.addEventListener("input", function(){ st(pl.id).note = ta.value; changed(pl.id); });
+    ng.appendChild(nl); ng.appendChild(ta); body.appendChild(ng);
+    card.appendChild(body);
+    root.appendChild(card);
+    cardEls[pl.id] = card;
+  });
+}
+function buildRow(pl, item){
+  var row = el("div", "row"); row.dataset.iid = item.id;
+  var fid = "f-" + pl.id + "-" + item.id;
+  if (item.t === P){
+    var b = el("button", "tap"); b.type = "button"; b.id = fid;
+    b.setAttribute("aria-pressed", "false");
+    b.appendChild(el("span", "box"));
+    var lab = el("span", null, item.l);
+    if (item.opt) lab.appendChild(el("span", "opttag", "できなくても可"));
+    b.appendChild(lab);
+    b.addEventListener("click", function(){
+      var s = st(pl.id); var c = JSON.parse(JSON.stringify(s.i[item.id] || {}));
+      c.d = !c.d;
+      s.i[item.id] = c;
+      changed(pl.id);
+    });
+    row.appendChild(b);
+    row.appendChild(buildMedia(pl, item.id));
+  } else {
+    var f = el("div", "field");
+    var l = el("label", null, item.l); l.htmlFor = fid;
+    if (item.opt) l.appendChild(el("span", "opttag", "できなくても可"));
+    f.appendChild(l);
+    var inp = el("input"); inp.type = "text"; inp.id = fid; inp.autocomplete = "off";
+    if (item.t === M) inp.inputMode = "decimal";
+    inp.addEventListener("input", function(){
+      st(pl.id).i[item.id] = {v: inp.value};
+      changed(pl.id);
+    });
+    if (item.u){
+      var wrap = el("div", "inline"); wrap.appendChild(inp); wrap.appendChild(el("span", null, item.u)); f.appendChild(wrap);
+    } else f.appendChild(inp);
+    row.appendChild(f);
+  }
+  return row;
+}
+
+/* ---------- render ---------- */
+function toggle(pid){
+  openId = (openId === pid) ? null : pid;
+  saveLocal();
+  PLACES.forEach(function(pl){
+    var c = cardEls[pl.id], on = pl.id === openId;
+    c.classList.toggle("open", on);
+    c.querySelector(".head").setAttribute("aria-expanded", on ? "true" : "false");
+  });
+  PLACES.forEach(function(pl){ if (pl.id !== openId) closeMedia(pl.id); });
+  if (openId) { renderMedia(openId); cardEls[openId].scrollIntoView({block:"start", behavior:"auto"}); }
+  applyFilter();
+}
+function refresh(pid){
+  var pl = PLACES.filter(function(p){ return p.id === pid; })[0];
+  if (!pl) return;
+  var card = cardEls[pid], n = 0, total = 0;
+  pl.items.forEach(function(item){
+    var row = card.querySelector('.row[data-iid="' + item.id + '"]');
+    var d = isDone(pid, item);
+    if (!item.opt) { total++; if (d) n++; }
+    row.classList.toggle("done", d);
+    var ctl = document.getElementById("f-" + pid + "-" + item.id);
+    if (item.t === P) ctl.setAttribute("aria-pressed", d ? "true" : "false");
+    else if (document.activeElement !== ctl && ctl.value !== val(pid, item.id)) ctl.value = val(pid, item.id);
+  });
+  var ta = document.getElementById("note-" + pid);
+  var note = st(pid).note || "";
+  if (document.activeElement !== ta && ta.value !== note) ta.value = note;
+  if (pl.venue){
+    var sel = document.getElementById("rank-" + pid);
+    if (document.activeElement !== sel) sel.value = st(pid).rank || "";
+    card.querySelector('[data-role="vname"]').textContent = val(pid, "name");
+  }
+  if (pid === openId) renderMedia(pid);
+  card.querySelector('[data-role="count"]').textContent = n + "/" + total;
+  card.classList.toggle("complete", total > 0 && n === total);
+  card.dataset.n = n; card.dataset.total = total;
+  totals(); tables(); applyFilter();
+}
+function totals(){
+  var mn = 0, mt = 0, an = 0, at = 0;
+  PLACES.forEach(function(pl){
+    var c = cardEls[pl.id], n = +c.dataset.n || 0, t = +c.dataset.total || 0;
+    an += n; at += t; if (pl.must) { mn += n; mt += t; }
+  });
+  document.getElementById("mustline").textContent = "必須 " + mn + "/" + mt;
+  document.getElementById("allline").textContent = "全体 " + an + "/" + at;
+  document.getElementById("barfill").style.width = (mt ? Math.round(mn / mt * 100) : 0) + "%";
+}
+function applyFilter(){
+  PLACES.forEach(function(pl){
+    var c = cardEls[pl.id], hide = false;
+    if (filter === "must" && !pl.must) hide = true;
+    if (filter === "todo" && c.classList.contains("complete") && pl.id !== openId) hide = true;
+    c.classList.toggle("hidden", hide);
+  });
+}
+var RANK = {"1":"1位","2":"2位","3":"3位","4":"4位","x":"条件を満たさない"};
+function cmpData(){
+  var vs = PLACES.filter(function(p){ return p.venue; });
+  var rows = [["項目"].concat(vs.map(function(v){ return v.name.replace("懇親会 ", ""); }))];
+  CMP_ROWS.forEach(function(r){ rows.push([r[1]].concat(vs.map(function(v){ return val(v.id, r[0]); }))); });
+  rows.push(["推薦順"].concat(vs.map(function(v){ return RANK[st(v.id).rank] || ""; })));
+  rows.push(["所感"].concat(vs.map(function(v){ return st(v.id).note || ""; })));
+  return rows;
+}
+function fillTable(id, rows){
+  var t = document.getElementById(id); t.textContent = "";
+  var thead = el("thead"), tr = el("tr");
+  rows[0].forEach(function(h){ var th = el("th", null, h); th.scope = "col"; tr.appendChild(th); });
+  thead.appendChild(tr); t.appendChild(thead);
+  var tb = el("tbody");
+  rows.slice(1).forEach(function(r){
+    var row = el("tr");
+    r.forEach(function(c, i){ var cellEl = el(i === 0 ? "th" : "td", null, c); if (i === 0) cellEl.scope = "row"; row.appendChild(cellEl); });
+    tb.appendChild(row);
+  });
+  t.appendChild(tb);
+}
+function tables(){
+  fillTable("cmp", cmpData());
+  var rows = [["場所", "所要時間(分)", "確認", "所感"]];
+  PLACES.filter(function(p){ return !p.venue; }).forEach(function(pl){
+    var c = cardEls[pl.id];
+    rows.push([pl.name, val(pl.id, "time"), (c.dataset.n || 0) + "/" + (c.dataset.total || 0), st(pl.id).note || ""]);
+  });
+  fillTable("sum", rows);
+  fillTable("flist", fileData());
+}
+function expName(pid, iid, idx){ return pid + "_" + (iid === "_x" ? "other" : iid) + "_" + (idx + 1) + ".jpg"; }
+function fileData(){
+  var rows = [["場所", "項目", "ファイル名", "日時", "保存先", "書き出し名"]];
+  PLACES.forEach(function(pl){
+    var label = pl.name + (pl.venue && val(pl.id, "name") ? " " + val(pl.id, "name") : "");
+    pl.items.filter(function(x){ return x.t === P; }).concat([{id:"_x", l:"そのほか"}]).forEach(function(item){
+      files(pl.id, item.id).forEach(function(x, idx){
+        if (!x) return;
+        rows.push([label, item.l, x.n || "(名前なし)", fmtTime(x.t), okId(x.id) ? "アプリ内" : "カメラロールのみ", okId(x.id) ? "photos/" + expName(pl.id, item.id, idx) : ""]);
+      });
+    });
+  });
+  return rows;
+}
+function copyRows(rows, msgId){
+  var text = rows.map(function(r){ return r.map(function(c){ return String(c).replace(/[\t\n]+/g, " "); }).join("\t"); }).join("\n");
+  var msg = document.getElementById(msgId);
+  try{
+    navigator.clipboard.writeText(text).then(function(){ msg.textContent = "コピーしました"; }, function(){ msg.textContent = "コピーできませんでした。表を長押しで選択してください"; });
+  }catch(e){ msg.textContent = "コピーできませんでした。表を長押しで選択してください"; }
+}
+
+/* ---------- events ---------- */
+Array.prototype.forEach.call(document.querySelectorAll(".chip"), function(ch){
+  ch.addEventListener("click", function(){
+    filter = ch.dataset.f;
+    Array.prototype.forEach.call(document.querySelectorAll(".chip"), function(o){ o.setAttribute("aria-pressed", o === ch ? "true" : "false"); });
+    applyFilter();
+  });
+});
+document.getElementById("copy").addEventListener("click", function(){ copyRows(cmpData(), "copymsg"); });
+document.getElementById("copyf").addEventListener("click", function(){ copyRows(fileData(), "copyfmsg"); });
+document.getElementById("vclose").addEventListener("click", closeViewer);
+document.addEventListener("keydown", function(e){ if (e.key === "Escape" && viewing) closeViewer(); });
+document.getElementById("vdel").addEventListener("click", function(){
+  if (!viewing) return;
+  if (!viewing.armed) { viewing.armed = true; this.textContent = "もう一度押すと削除します"; return; }
+  var v = viewing, s = st(v.pid), c = JSON.parse(JSON.stringify(s.i[v.iid] || {}));
+  c.f = (Array.isArray(c.f) ? c.f : []).filter(function(x){ return x && fkey(x) !== v.key; });
+  s.i[v.iid] = c;
+  closeViewer();
+  changed(v.pid);
+  if (v.id) {
+    if (urls[v.id]) { URL.revokeObjectURL(urls[v.id]); delete urls[v.id]; }
+    if (idb) idbDel("files", v.id).then(null, function(){});
+  }
+});
+
+/* ---------- export ---------- */
+function tsv(rows){
+  return "﻿" + rows.map(function(r){ return r.map(function(c){ return String(c == null ? "" : c).replace(/[\t\r\n]+/g, " "); }).join("\t"); }).join("\r\n");
+}
+function answerData(){
+  var rows = [["場所", "区分", "項目", "入力", "済"]];
+  PLACES.forEach(function(pl){
+    var label = pl.name + (pl.venue && val(pl.id, "name") ? " " + val(pl.id, "name") : "");
+    pl.items.forEach(function(item){
+      rows.push([label, item.g || GROUP_NAME[item.t], item.l, item.t === P ? "" : val(pl.id, item.id), isDone(pl.id, item) ? "済" : ""]);
+    });
+    if (pl.venue) rows.push([label, "推薦順", "推薦順", RANK[st(pl.id).rank] || "", ""]);
+    rows.push([label, "所感", "所感", st(pl.id).note || "", ""]);
+  });
+  return rows;
+}
+function summaryData(){
+  var rows = [["場所", "所要時間(分)", "確認", "所感"]];
+  PLACES.filter(function(p){ return !p.venue; }).forEach(function(pl){
+    var c = cardEls[pl.id];
+    rows.push([pl.name, val(pl.id, "time"), (c.dataset.n || 0) + "/" + (c.dataset.total || 0), st(pl.id).note || ""]);
+  });
+  return rows;
+}
+function photoEntries(){
+  var out = [];
+  PLACES.forEach(function(pl){
+    pl.items.filter(function(x){ return x.t === P; }).concat([{id:"_x", l:"そのほか"}]).forEach(function(item){
+      files(pl.id, item.id).forEach(function(x, idx){
+        if (x && okId(x.id)) out.push({id:x.id, name:expName(pl.id, item.id, idx)});
+      });
+    });
+  });
+  return out;
+}
+var exported = null;
+function setExpMsg(t){ document.getElementById("expmsg").textContent = t; }
+document.getElementById("expmake").addEventListener("click", function(){
+  var btn = this;
+  if (typeof JSZip === "undefined") { setExpMsg("書き出しの部品を読み込めていません。電波のある場所で一度開き直してください。"); return; }
+  btn.disabled = true;
+  document.getElementById("expsend").classList.add("hidden");
+  document.getElementById("explink").classList.add("hidden");
+  var zip = new JSZip();
+  zip.file("data.json", JSON.stringify({app:"gencho-jkt-2026", version:APP_VERSION, exported:new Date().toISOString(), state:state}, null, 1));
+  zip.file("answers.tsv", tsv(answerData()));
+  zip.file("venues.tsv", tsv(cmpData()));
+  zip.file("places.tsv", tsv(summaryData()));
+  zip.file("files.tsv", tsv(fileData()));
+  var list = photoEntries(), i = 0, missing = 0;
+  function next(){
+    if (i >= list.length) return Promise.resolve();
+    var e = list[i++];
+    setExpMsg("写真をまとめています " + i + "/" + list.length);
+    if (!idb) { missing++; return next(); }
+    return idbGet("files", e.id).then(function(r){
+      if (r && r.buf) zip.file("photos/" + e.name, r.buf); else missing++;
+    }, function(){ missing++; }).then(next);
+  }
+  next().then(function(){
+    setExpMsg("ファイルを作成しています");
+    return zip.generateAsync({type:"blob", compression:"STORE"});
+  }).then(function(blob){
+    var d = new Date();
+    function z(n){ return (n < 10 ? "0" : "") + n; }
+    var name = "gencho-jakarta-" + d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate()) + "-" + z(d.getHours()) + z(d.getMinutes()) + ".zip";
+    if (exported && exported.url) URL.revokeObjectURL(exported.url);
+    exported = {blob:blob, name:name, url:URL.createObjectURL(blob)};
+    var a = document.getElementById("explink"); a.href = exported.url; a.download = name; a.classList.remove("hidden");
+    document.getElementById("expsend").classList.remove("hidden");
+    setExpMsg("できました(" + (Math.round(blob.size / 104857.6) / 10) + "MB、写真" + (list.length - missing) + "枚)。下のボタンで保存か送信をしてください。");
+  }).then(null, function(){
+    setExpMsg("書き出しに失敗しました。空き容量を確認して、もう一度お試しください。");
+  }).then(function(){ btn.disabled = false; });
+});
+document.getElementById("expsend").addEventListener("click", function(){
+  if (!exported) return;
+  var file;
+  try{ file = new File([exported.blob], exported.name, {type:"application/zip"}); }catch(e){ file = null; }
+  if (file && navigator.canShare && navigator.canShare({files:[file]})) {
+    navigator.share({files:[file], title:"ジャカルタ現調"}).then(null, function(){});
+  } else {
+    setExpMsg("この端末では共有を開けません。隣のリンクから保存してください。");
+  }
+});
+document.getElementById("expcopy").addEventListener("click", function(){ copyRows(answerData(), "expmsg"); });
+var resetArmed = false;
+document.getElementById("reset").addEventListener("click", function(){
+  if (!resetArmed) { resetArmed = true; this.textContent = "もう一度押すとすべて消えます"; return; }
+  resetArmed = false; this.textContent = "入力と写真をすべて消す";
+  state = {};
+  Object.keys(urls).forEach(function(k){ URL.revokeObjectURL(urls[k]); delete urls[k]; });
+  saveLocal();
+  if (idb) idbClear("files").then(null, function(){});
+  PLACES.forEach(function(pl){ cardEls[pl.id].querySelectorAll("[data-media]").forEach(function(b){ b.dataset.sig = ""; b.querySelector(".thumbs").textContent = ""; }); refresh(pl.id); });
+  showStatus();
+  setExpMsg("すべて消しました。");
+});
+
+/* ---------- start ---------- */
+document.body.classList.add("has-assets");
+var hadLocal = loadLocal();
+build();
+PLACES.forEach(function(pl){ refresh(pl.id); });
+if (openId && cardEls[openId]) { var keep = openId; openId = null; toggle(keep); }
+showStatus();
+
+openDb().then(function(d){
+  idb = d;
+  if (hadLocal) { mirror(JSON.stringify({state:state, open:openId})); if (openId) renderMedia(openId); return; }
+  return idbGet("kv", "state").then(function(s){
+    if (typeof s !== "string") return;
+    try{
+      var o = JSON.parse(s);
+      if (o && o.state) { state = o.state; saveLocal(); PLACES.forEach(function(pl){ refresh(pl.id); }); }
+    }catch(e){}
+  });
+}).then(null, function(){ idb = null; });
+
+try{ if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(null, function(){}); }catch(e){}
+
+(function(){
+  var hint = document.getElementById("hint");
+  var standalone = (window.navigator.standalone === true) || (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+  function say(t){ hint.textContent = t; hint.classList.toggle("hidden", !t); }
+  if (!("serviceWorker" in navigator)) { say("このブラウザは電波なしでの起動に対応していません。iPhoneかiPadのSafariで開いてください。"); return; }
+  navigator.serviceWorker.register("sw.js").then(function(){
+    return navigator.serviceWorker.ready;
+  }).then(function(){
+    say(standalone ? "" : "電波なしで使う準備ができました。Safariの共有メニューから「ホーム画面に追加」を押し、以後はホーム画面のアイコンから開いてください。");
+  }, function(){
+    say("電波なしで使う準備ができませんでした。電波のある場所で開き直してください。");
+  });
+})();
+</script>
+</body>
+</html>
