@@ -194,6 +194,13 @@ tr:last-child td,tr:last-child th{border-bottom:0}
     <label class="btn" for="impfile">書き出しファイルを選ぶ</label>
   </div>
   <p class="msg" id="impmsg" aria-live="polite"></p>
+
+  <h2>アプリの版</h2>
+  <div class="actions">
+    <span class="msg" id="verline"></span>
+    <button type="button" class="btn alt" id="update">最新版を確認して更新</button>
+  </div>
+  <p class="msg" id="updmsg" aria-live="polite"></p>
 </div>
 
 <div class="viewer hidden" id="viewer" role="dialog" aria-modal="true" aria-label="写真と動画の表示">
@@ -351,7 +358,7 @@ var CMP_ROWS = [
 ];
 
 /* ---------- state ---------- */
-var APP_VERSION = "4";
+var APP_VERSION = "5";
 var LS = "gencho-jkt-2026-local";
 var state = {};      // pid -> {i:{iid:{d,v,f}}, note, rank}
 var filter = "all", openId = null, saveOk = true, idb = null;
@@ -1090,6 +1097,27 @@ document.getElementById("impfile").addEventListener("change", function(){
   }).then(null, function(){
     msg.textContent = "読み込めませんでした。このアプリで書き出したファイルを選んでください。";
   });
+});
+
+/* ---------- version ---------- */
+document.getElementById("verline").textContent = "この端末の版: " + APP_VERSION;
+document.getElementById("update").addEventListener("click", function(){
+  var msg = document.getElementById("updmsg");
+  if (!("serviceWorker" in navigator) || !window.caches) { msg.textContent = "この画面では更新できません。Safariで開き直してください。"; return; }
+  msg.textContent = "確認しています";
+  fetch("index.html?t=" + Date.now(), {cache:"no-store"}).then(function(res){
+    if (!res.ok) throw new Error("net");
+    return res.text();
+  }).then(function(txt){
+    var m = /var APP_VERSION = "(\d+)"/.exec(txt), latest = m ? m[1] : "";
+    if (!latest) throw new Error("net");
+    if (latest === APP_VERSION) { msg.textContent = "最新版です(版 " + APP_VERSION + ")。"; return; }
+    msg.textContent = "版 " + latest + " に更新しています";
+    return caches.keys().then(function(keys){ return Promise.all(keys.map(function(k){ return caches.delete(k); })); })
+      .then(function(){ return navigator.serviceWorker.getRegistration(); })
+      .then(function(reg){ return reg ? reg.update() : null; })
+      .then(function(){ location.reload(); });
+  }).then(null, function(){ msg.textContent = "確認できませんでした。電波のある場所でもう一度お試しください。"; });
 });
 
 /* ---------- start ---------- */
