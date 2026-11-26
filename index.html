@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="現調チェック">
@@ -14,11 +14,12 @@
 <title>ジャカルタ現調チェック</title>
 <style>
 :root{
-  /* layout: one column of place cards under a sticky progress bar; the report tables sit at the end */
+  /* layout: a place list as the home screen, one place per screen, and thumb-reach controls in a bottom bar */
   --bg:#f2f4f8; --surface:#ffffff; --ink:#18233a; --muted:#5d6880; --line:#d5dbe6;
   --accent:#223a63; --accent-ink:#ffffff;
   --done:#1f7a4d; --done-bg:#e3f3ea; --warn:#a65a00; --warn-bg:#fdefd8;
   --font:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  --barh:64px;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -36,65 +37,79 @@
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.55}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5}
 button,input,textarea,select{font:inherit;color:inherit}
+button{-webkit-tap-highlight-color:transparent}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.wrap{max-width:760px;margin:0 auto;padding:0 16px 64px}
-header.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 0 10px;border-bottom:1px solid var(--line)}
-.titleline{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
-h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.02em}
-.status{font-size:12px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
-button.status{cursor:pointer}
+.wrap{max-width:760px;margin:0 auto;padding:0 14px calc(var(--barh) + 40px + env(safe-area-inset-bottom))}
+header.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(8px + env(safe-area-inset-top)) 0 8px;border-bottom:1px solid var(--line)}
+.titleline{display:flex;align-items:center;justify-content:space-between;gap:10px}
+h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.02em;min-width:0;overflow-wrap:anywhere;line-height:1.3}
+h1 small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.status{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;white-space:nowrap;flex:none}
 .status.warn{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
 .status.ok{background:var(--done-bg);color:var(--done);border-color:transparent}
-.bar{height:8px;border-radius:999px;background:var(--line);margin:10px 0 6px;overflow:hidden}
+.bar{height:6px;border-radius:999px;background:var(--line);margin:8px 0 4px;overflow:hidden}
 .bar > i{display:block;height:100%;width:0;background:var(--done);transition:width .2s}
 @media (prefers-reduced-motion: reduce){.bar > i{transition:none}}
-.barline{display:flex;justify-content:space-between;gap:12px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
-.chips{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.chip{min-height:36px;padding:4px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:14px}
+.barline{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.chips{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.chip{min-height:38px;padding:4px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:14px;white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.tip{font-size:13px;color:var(--muted);margin:14px 0 4px}
-.cards{display:flex;flex-direction:column;gap:10px;margin-top:10px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.card.complete{border-color:var(--done)}
-.head{width:100%;display:flex;align-items:center;gap:10px;padding:14px;background:none;border:0;text-align:left;cursor:pointer;min-height:56px}
-.head .name{flex:1;font-weight:700;font-size:16px;min-width:0}
-.head .sub{display:block;font-weight:400;font-size:12px;color:var(--muted)}
-.badge{font-size:11px;padding:2px 8px;border-radius:6px;white-space:nowrap}
-.badge.must{background:var(--accent);color:var(--accent-ink)}
-.badge.opt{border:1px solid var(--line);color:var(--muted)}
-.count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.card.complete .count{color:var(--done);font-weight:700}
-.chev{width:10px;height:10px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 4px 4px 2px;flex:none}
-.card.open .chev{transform:rotate(-135deg);margin:4px 4px 0 2px}
-.body{display:none;padding:0 14px 14px;border-top:1px solid var(--line)}
-.card.open .body{display:block}
+.jump{display:flex;gap:8px;margin-top:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.tip{font-size:13px;color:var(--muted);margin:12px 0 4px}
+.tip.warn{color:var(--warn)}
+.search{margin-top:12px}
+.sect{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;margin:16px 0 6px}
+.list{display:flex;flex-direction:column;gap:6px}
+.prow{width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;min-height:56px;background:var(--surface);border:1px solid var(--line);border-radius:12px;text-align:left;cursor:pointer}
+.prow.complete{border-color:var(--done);background:var(--done-bg)}
+.prow .name{flex:1;font-weight:700;font-size:15px;min-width:0;line-height:1.35}
+.prow .sub{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.prow .count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.prow.complete .count{color:var(--done);font-weight:700}
+.prow.resume{border-color:var(--accent);border-width:2px}
+.prow.hit .name{font-weight:400}
+.arrow{width:9px;height:9px;border-right:2px solid var(--muted);border-top:2px solid var(--muted);transform:rotate(45deg);flex:none;margin-right:4px}
+.timers{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.timers:empty{display:none}
+.trun{width:100%;display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--warn);background:var(--warn-bg);color:var(--warn);text-align:left;cursor:pointer;font-size:14px;font-variant-numeric:tabular-nums}
 .first{font-size:13px;color:var(--muted);margin:10px 0 0}
-.group{margin-top:14px}
-.glabel{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;margin-bottom:6px}
+.group{margin-top:14px;scroll-margin-top:150px}
+.glabel{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;margin-bottom:6px;display:block}
 .rows{display:flex;flex-direction:column;gap:6px}
-.row{border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.row{border:1px solid var(--line);border-radius:10px;background:var(--surface);scroll-margin-top:150px}
 .row.done{background:var(--done-bg);border-color:transparent}
-.tap{width:100%;display:flex;align-items:center;gap:12px;padding:12px;background:none;border:0;text-align:left;cursor:pointer;min-height:52px}
-.box{width:26px;height:26px;border-radius:50%;border:2px solid var(--muted);flex:none;display:grid;place-items:center}
+.row.flash{outline:3px solid var(--accent);outline-offset:1px}
+.todo-only .row.done:not(.keep){display:none}
+.rline{display:flex;align-items:stretch}
+.tap{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:10px 6px 10px 12px;background:none;border:0;text-align:left;cursor:pointer;min-height:52px}
+.tap .lab{flex:1;min-width:0;font-size:15px;line-height:1.35}
+.box{width:28px;height:28px;border-radius:50%;border:2px solid var(--muted);flex:none;display:grid;place-items:center}
 .row.done .box{background:var(--done);border-color:var(--done)}
-.row.done .box::after{content:"";width:11px;height:6px;border-left:3px solid var(--surface);border-bottom:3px solid var(--surface);transform:rotate(-45deg) translate(1px,-1px)}
-.field{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px}
-.field label{font-size:14px}
+.row.done .box::after{content:"";width:12px;height:6px;border-left:3px solid var(--surface);border-bottom:3px solid var(--surface);transform:rotate(-45deg) translate(1px,-1px)}
+.when{font-size:11px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.plus{display:flex;align-items:center;justify-content:center;min-width:76px;padding:0 10px;margin:6px 6px 6px 0;border-radius:8px;border:1px dashed var(--muted);cursor:pointer;font-size:13px;color:var(--muted);white-space:nowrap}
+.field{padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px}
+.flabel{display:flex;align-items:flex-start;gap:8px}
+.flabel label{flex:1;font-size:15px;line-height:1.35}
+.mini{min-height:36px;padding:2px 12px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:13px;cursor:pointer;white-space:nowrap;flex:none}
+.mini.on{background:var(--warn-bg);border-color:var(--warn);color:var(--warn);font-variant-numeric:tabular-nums}
+.quick{display:flex;gap:8px}
+.quick .chip{flex:1;min-height:44px;font-size:15px}
 .inline{display:flex;align-items:center;gap:8px}
 .inline span{font-size:13px;color:var(--muted);white-space:nowrap}
-input[type="text"],textarea,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:16px}
-textarea{min-height:76px;resize:vertical}
-.alt{font-size:12px;color:var(--warn);overflow-wrap:anywhere}
-.alt:empty{display:none}
-.whorow{display:flex;align-items:center;gap:10px;margin:12px 0 0;flex-wrap:wrap}
-.whorow label{font-size:13px;color:var(--muted)}
-.whorow input[type="text"]{flex:1;min-width:140px;width:auto}
-label.btn{display:inline-flex;align-items:center}
-.when{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+input[type="text"],input[type="search"],input[type="url"],textarea,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px;min-height:44px}
+.row.done input[type="text"]{background:var(--surface)}
+textarea{min-height:76px;resize:vertical;background:var(--surface)}
+.others{display:flex;flex-direction:column;gap:4px;padding:0 12px 10px}
+.field .others{padding:0}
+.others:empty{display:none}
+.other{font-size:13px;border-left:3px solid var(--accent);padding:2px 0 2px 8px;overflow-wrap:anywhere}
+.other b{font-weight:700}
+.other span{color:var(--muted);font-size:11px;margin-left:6px;white-space:nowrap}
 .opttag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 5px;margin-left:6px;white-space:nowrap}
-h2{font-size:17px;margin:34px 0 4px}
+h2{font-size:17px;margin:26px 0 4px}
 .lead{font-size:13px;color:var(--muted);margin:0 0 10px}
 .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 table{border-collapse:collapse;width:100%;min-width:640px;font-size:13px}
@@ -103,24 +118,33 @@ thead th{background:var(--bg);font-size:12px;color:var(--muted)}
 tbody th{font-weight:400;color:var(--muted);width:150px}
 tr:last-child td,tr:last-child th{border-bottom:0}
 .actions{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
-.btn{min-height:44px;padding:8px 16px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.btn{min-height:48px;padding:8px 16px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.btn.big{width:100%;font-weight:700}
+label.btn{display:inline-flex;align-items:center;justify-content:center}
 .msg{font-size:13px;color:var(--muted)}
 .btn.alt{background:transparent;color:var(--accent)}
 .btn:disabled{opacity:.5}
-.mediawrap{padding:0 12px 10px}
-.media{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.thumbs{display:contents}
-.thumb{width:72px;height:72px;border-radius:8px;border:1px solid var(--line);overflow:hidden;padding:0;background:var(--surface);cursor:pointer;display:grid;place-items:center;font-size:12px;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px}
+.panel p{margin:0 0 8px;font-size:14px}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:6px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border-bottom:0}
+.kv span:last-child{color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
+.check{display:flex;align-items:center;gap:10px;min-height:44px;font-size:14px}
+.check input{width:22px;height:22px}
+details{margin-top:14px}
+summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:14px;color:var(--accent)}
+.media{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;padding:0 12px 10px}
+.media:empty{display:none}
+.thumb{width:64px;height:64px;border-radius:8px;border:1px solid var(--line);overflow:hidden;padding:0;background:var(--surface);cursor:pointer;display:grid;place-items:center;font-size:11px;color:var(--muted)}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .thumb.rec{border-style:dashed;padding:4px;text-align:center;line-height:1.3}
-.fig{width:72px}
+.thumb.peer{border-color:var(--accent);border-width:2px}
+.fig{width:64px}
 .cap{font-size:10px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere;line-height:1.3}
 .vname,.vnote{color:#ffffff;font-size:14px;text-align:center;overflow-wrap:anywhere}
-.add{display:none;align-items:center;min-height:44px;padding:6px 14px;border-radius:8px;border:1px dashed var(--muted);cursor:pointer;font-size:14px;color:var(--muted)}
-.has-assets .add{display:inline-flex}
 .fileinput{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
-.fileinput:focus-visible + .add{outline:3px solid var(--accent);outline-offset:2px}
-.upmsg{font-size:12px;color:var(--warn);margin-top:6px}
+.fileinput:focus-visible + .plus,.fileinput:focus-visible + .btn{outline:3px solid var(--accent);outline-offset:2px}
+.upmsg{font-size:12px;color:var(--warn);padding:0 12px 8px}
 .upmsg:empty{display:none}
 .viewer{position:fixed;inset:0;z-index:20;background:rgba(10,14,24,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px}
 .viewer .stage{flex:1;min-height:0;width:100%;display:grid;place-items:center}
@@ -128,6 +152,17 @@ tr:last-child td,tr:last-child th{border-bottom:0}
 .viewer .vbtns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
 .btn.ghost{background:transparent;color:#ffffff;border-color:#ffffff}
 .btn.danger{background:#b3261e;border-color:#b3261e;color:#ffffff}
+.show{position:fixed;inset:0;z-index:20;background:#ffffff;color:#111111;display:flex;flex-direction:column;gap:18px;padding:calc(24px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));overflow:auto}
+.show .lang{font-size:12px;color:#666666;letter-spacing:.08em}
+.show .en,.show .idn{font-size:26px;line-height:1.35;font-weight:700;margin:2px 0 0;overflow-wrap:anywhere}
+.show .ja{font-size:14px;color:#666666;margin:0}
+.show .btn{margin-top:auto;background:#223a63;border-color:#223a63;color:#ffffff}
+.bottom{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom));display:flex;gap:6px;justify-content:center}
+.bottom button{flex:1;max-width:240px;min-height:52px;border-radius:10px;border:1px solid transparent;background:none;cursor:pointer;font-size:14px;color:var(--muted)}
+.bottom button[aria-current="page"]{color:var(--accent);font-weight:700;background:var(--bg)}
+.bottom button.main{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.bottom button.side{border-color:var(--line);color:var(--ink)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--barh) + 24px + env(safe-area-inset-bottom));z-index:8;background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:14px;max-width:90%}
 .hidden{display:none !important}
 </style>
 </head>
@@ -135,73 +170,124 @@ tr:last-child td,tr:last-child th{border-bottom:0}
 <div class="wrap">
   <header class="top">
     <div class="titleline">
-      <h1>ジャカルタ現調チェック</h1>
-      <span class="status" id="status">読み込み中</span>
+      <h1 id="title">ジャカルタ現調チェック</h1>
+      <button type="button" class="status" id="status">読み込み中</button>
     </div>
     <div class="bar" aria-hidden="true"><i id="barfill"></i></div>
     <div class="barline"><span id="mustline">必須 0/0</span><span id="allline">全体 0/0</span></div>
+    <div class="jump hidden" id="jump"></div>
+  </header>
+
+  <main id="v-home">
+    <p class="tip hidden" id="hint"></p>
+    <p class="tip warn hidden" id="whowarn">最初に、この端末の記録者の名前を入れてください。だれの記入かを見分けるために使います。</p>
+    <div class="panel" id="whopanel">
+      <label class="glabel" for="who">この端末の記録者</label>
+      <input type="text" id="who" autocomplete="off" maxlength="20">
+    </div>
+    <div class="timers" id="timers"></div>
+    <div class="search"><input type="search" id="q" placeholder="場所や項目を探す" aria-label="場所や項目を探す" autocomplete="off"></div>
     <div class="chips" role="group" aria-label="表示の絞り込み">
       <button type="button" class="chip" data-f="all" aria-pressed="true">すべて</button>
       <button type="button" class="chip" data-f="must" aria-pressed="false">必須のみ</button>
       <button type="button" class="chip" data-f="todo" aria-pressed="false">未完了のみ</button>
     </div>
-  </header>
+    <div id="homelist"></div>
+  </main>
 
-  <p class="tip hidden" id="hint"></p>
-  <p class="tip">12月3日から6日。場所に着いたらカードを開き、最初に看板か入口を1枚撮ってください。写真はカメラアプリで撮ってから、各項目の下の「写真と動画を追加」でカメラロールから選ぶと、元のファイル名が残ります。動画はファイル名だけを記録します。入力と写真はこの端末の中だけに保存されます。</p>
+  <main id="v-place" class="hidden"></main>
 
-  <div class="whorow"><label for="who">この端末の記録者</label><input type="text" id="who" autocomplete="off" maxlength="20"></div>
+  <main id="v-sum" class="hidden">
+    <h2>懇親会候補の比較</h2>
+    <p class="lead">候補ごとの入力を並べます。記入が人によって違う項目は、全員分を名前つきで表示します。</p>
+    <div class="scroll"><table id="cmp"></table></div>
+    <div class="actions">
+      <button type="button" class="btn alt" id="copy">比較表をコピー</button>
+      <span class="msg" id="copymsg"></span>
+    </div>
+    <h2>そのほかの場所の要点</h2>
+    <div class="scroll"><table id="sum"></table></div>
+    <h2>写真と動画の一覧</h2>
+    <p class="lead">追加したファイルの名前を、場所と項目ごとに並べます。</p>
+    <div class="scroll"><table id="flist"></table></div>
+    <div class="actions">
+      <button type="button" class="btn alt" id="copyf">一覧をコピー</button>
+      <span class="msg" id="copyfmsg"></span>
+    </div>
+  </main>
 
-  <div class="cards" id="cards"></div>
+  <main id="v-data" class="hidden">
+    <h2>みんなの記入を集める</h2>
+    <div id="syncoff">
+      <p class="lead">接続すると、電波があるときに各端末の記入と写真が自動で共有の置き場に集まり、全員の画面に全員分が表示されます。電波がない間の記入は端末に残り、つながったときに送られます。</p>
+      <div class="panel">
+        <label class="glabel" for="syncurl">接続コード</label>
+        <input type="url" id="syncurl" autocomplete="off" inputmode="url" placeholder="https://script.google.com/macros/s/...">
+        <div class="actions"><button type="button" class="btn big" id="syncconnect">接続する</button></div>
+      </div>
+    </div>
+    <div id="syncon" class="hidden">
+      <div class="panel">
+        <div class="kv"><span>状態</span><span id="syncstate"></span></div>
+        <div class="kv"><span>最後に集めた時刻</span><span id="synclast"></span></div>
+        <div class="kv"><span>まだ送っていない写真</span><span id="syncphotos"></span></div>
+        <div class="actions"><button type="button" class="btn big" id="syncnow">今すぐ集める</button></div>
+        <label class="check"><input type="checkbox" id="syncphotoon"> 写真も送る(通信量を抑えたいときは外す)</label>
+      </div>
+      <div class="sect">集まっている記入</div>
+      <div class="panel" id="peerlist"></div>
+      <div class="actions">
+        <button type="button" class="btn alt" id="synccopy">接続コードをコピー</button>
+        <button type="button" class="btn alt" id="syncdrop">接続を解除</button>
+      </div>
+    </div>
+    <p class="msg" id="syncmsg" aria-live="polite"></p>
 
-  <h2>懇親会候補の比較</h2>
-  <p class="lead">候補カードに入力した内容がここに並びます。帰国後の報告にそのまま使えます。</p>
-  <div class="scroll"><table id="cmp"></table></div>
-  <div class="actions">
-    <button type="button" class="btn" id="copy">比較表をコピー</button>
-    <span class="msg" id="copymsg"></span>
-  </div>
+    <h2>控えを残す</h2>
+    <p class="lead">この端末にある記入と写真を1つのファイルにまとめます。帰国後、このファイルをClaudeの会話に添付すると報告書の下書きに使えます。</p>
+    <div class="actions">
+      <button type="button" class="btn big" id="expmake">控えファイルをつくる</button>
+      <button type="button" class="btn big hidden" id="expsend">保存または送信</button>
+      <a class="msg hidden" id="explink" href="#">共有を開けないときはここから保存</a>
+    </div>
+    <p class="msg" id="expmsg" aria-live="polite"></p>
 
-  <h2>そのほかの場所の要点</h2>
-  <p class="lead">所要時間と所感を場所ごとにまとめます。</p>
-  <div class="scroll"><table id="sum"></table></div>
+    <details>
+      <summary>電波がないときに集める</summary>
+      <p class="lead">ほかの端末でつくった控えファイルをAirDropで受け取り、下のボタンで選ぶと、その人の記入がこの端末に加わります。この端末の記入は書き換わりません。</p>
+      <div class="actions">
+        <input class="fileinput" type="file" id="impfile" accept=".zip,application/zip">
+        <label class="btn alt" for="impfile">受け取った控えファイルを選ぶ</label>
+      </div>
+      <p class="msg" id="impmsg" aria-live="polite"></p>
+    </details>
 
-  <h2>写真と動画の一覧</h2>
-  <p class="lead">追加したファイルの名前を、場所と項目ごとに並べます。カメラロールの元データと照らし合わせるときに使えます。</p>
-  <div class="scroll"><table id="flist"></table></div>
-  <div class="actions">
-    <button type="button" class="btn" id="copyf">一覧をコピー</button>
-    <span class="msg" id="copyfmsg"></span>
-  </div>
-
-  <h2>書き出し</h2>
-  <p class="lead">入力内容と写真を1つのファイルにまとめます。帰国後、このファイルをClaudeの会話に添付すると報告書の下書きに使えます。現地でも1日の終わりに書き出しておくと控えになります。</p>
-  <div class="actions">
-    <button type="button" class="btn" id="expmake">書き出しファイルをつくる</button>
-    <button type="button" class="btn hidden" id="expsend">保存または送信</button>
-    <a class="msg hidden" id="explink" href="#">リンクから保存</a>
-  </div>
-  <div class="actions">
-    <button type="button" class="btn alt" id="expcopy">入力内容だけコピー</button>
-    <button type="button" class="btn alt" id="reset">入力と写真をすべて消す</button>
-  </div>
-  <p class="msg" id="expmsg" aria-live="polite"></p>
-
-  <h2>ほかの端末のデータを合算する</h2>
-  <p class="lead">ほかの端末で書き出したファイルを選ぶと、この端末のデータに合算します。同じ項目に両方の入力がある場合は新しいほうを表示し、もう一方も「ほかの入力」として残します。写真は全員分が残ります。</p>
-  <div class="actions">
-    <input class="fileinput" type="file" id="impfile" accept=".zip,application/zip">
-    <label class="btn" for="impfile">書き出しファイルを選ぶ</label>
-  </div>
-  <p class="msg" id="impmsg" aria-live="polite"></p>
-
-  <h2>アプリの版</h2>
-  <div class="actions">
-    <span class="msg" id="verline"></span>
-    <button type="button" class="btn alt" id="update">最新版を確認して更新</button>
-  </div>
-  <p class="msg" id="updmsg" aria-live="polite"></p>
+    <details>
+      <summary>そのほかの操作</summary>
+      <div class="actions">
+        <button type="button" class="btn alt" id="expcopy">入力内容だけコピー</button>
+        <button type="button" class="btn alt" id="reset">この端末の入力と写真をすべて消す</button>
+      </div>
+      <div class="actions">
+        <span class="msg" id="verline"></span>
+        <button type="button" class="btn alt" id="update">最新版を確認して更新</button>
+      </div>
+      <p class="msg" id="updmsg" aria-live="polite"></p>
+    </details>
+  </main>
 </div>
+
+<nav class="bottom" id="tabbar" aria-label="画面の切り替え">
+  <button type="button" data-tab="home" aria-current="page">場所</button>
+  <button type="button" data-tab="sum">まとめ</button>
+  <button type="button" data-tab="data">集める、控え</button>
+</nav>
+<div class="bottom hidden" id="placebar">
+  <button type="button" class="side" id="pb-back">一覧へ</button>
+  <button type="button" class="main" id="pb-next">次の未完了</button>
+  <button type="button" class="side" id="pb-place">次の場所</button>
+</div>
+<div class="toast hidden" id="toast" role="status"></div>
 
 <div class="viewer hidden" id="viewer" role="dialog" aria-modal="true" aria-label="写真と動画の表示">
   <div class="stage" id="vstage"></div>
@@ -210,6 +296,12 @@ tr:last-child td,tr:last-child th{border-bottom:0}
     <button type="button" class="btn ghost" id="vclose">閉じる</button>
     <button type="button" class="btn danger" id="vdel">削除</button>
   </div>
+</div>
+<div class="show hidden" id="show" role="dialog" aria-modal="true" aria-label="相手に見せる質問">
+  <div><div class="lang">ENGLISH</div><p class="en" id="show-en" lang="en"></p></div>
+  <div><div class="lang">BAHASA INDONESIA</div><p class="idn" id="show-id" lang="id"></p></div>
+  <p class="ja" id="show-ja"></p>
+  <button type="button" class="btn" id="show-close">閉じる</button>
 </div>
 
 <script src="jszip.min.js"></script>
@@ -440,14 +532,71 @@ var CMP_ROWS = [
   ["a_name","二次会の店"],["a_time","二次会までの移動(分)"]
 ];
 
+/* ---------- questions to show to staff: [English, Indonesian] ---------- */
+var SEATS = ["How many seats do you have? How do we make a group reservation, and what is the budget per person?", "Ada berapa kursi? Bagaimana cara reservasi untuk rombongan, dan berapa kisaran harga per orang?"];
+var HOURS = ["What are your opening hours and last order time?", "Buka sampai jam berapa, dan last order jam berapa?"];
+var BOOK = ["Can we make a reservation? How many people can you seat?", "Apakah bisa reservasi? Bisa untuk berapa orang?"];
+var SMOKEIN = ["Is smoking allowed inside?", "Apakah boleh merokok di dalam?"];
+var PRICE = ["About how much is it per person?", "Kira-kira berapa harga per orang?"];
+var PH = {
+  "v:price": ["What is the total price per person, including drinks, tax and service charge?", "Berapa total harga per orang, termasuk minuman, pajak, dan biaya layanan?"],
+  "v:avail": ["Can we book for 50 to 60 people on the evening of Monday, March 29, 2027?", "Apakah bisa reservasi untuk 50 sampai 60 orang pada malam hari Senin, 29 Maret 2027?"],
+  "v:private": ["Do you have a private room, or can we reserve the whole venue?", "Apakah ada ruang privat, atau bisakah kami menyewa seluruh tempat?"],
+  "v:micq": ["How many microphones can we use?", "Berapa mikrofon yang bisa kami gunakan?"],
+  "v:drink": ["Do you offer a free-flow drink package? What is included, and for how long?", "Apakah ada paket minuman free flow? Apa saja isinya, dan berapa lama?"],
+  "v:min": ["Is there a minimum spend or a minimum number of guests?", "Apakah ada minimum pembelanjaan atau jumlah tamu minimum?"],
+  "v:depo": ["How much is the deposit, and when is it due?", "Berapa uang mukanya, dan kapan harus dibayar?"],
+  "v:cancel": ["What is your cancellation policy?", "Bagaimana kebijakan pembatalannya?"],
+  "v:pay": ["Which payment methods do you accept? Can you issue a receipt?", "Metode pembayaran apa saja yang diterima? Apakah bisa diberikan kuitansi?"],
+  "v:smoke": ["Where is the smoking area?", "Di mana area merokok?"],
+  "v:halal": ["Can you provide halal food and handle food allergies?", "Apakah bisa menyediakan makanan halal dan menangani alergi makanan?"],
+  "v:hold": ["Can you hold the reservation tentatively? Until when?", "Apakah reservasinya bisa ditahan sementara? Sampai kapan?"],
+  "v:staff": ["May I have the name and contact of the person in charge?", "Boleh minta nama dan kontak penanggung jawabnya?"],
+  "v:a_hours": HOURS, "v:a_book": BOOK, "v:a_smoke": SMOKEIN, "v:a_price": PRICE,
+  "g:rental": ["How many rental club sets and pairs of shoes do you have, and how much are they?", "Ada berapa set stik golf dan sepatu sewaan, dan berapa harganya?"],
+  "g:book": ["How do we reserve rental clubs in advance, and what is the deadline?", "Bagaimana cara memesan stik sewaan sebelumnya, dan kapan batas waktunya?"],
+  "g:cart": ["Do players ride in golf carts? How many caddies are there per group?", "Apakah pemain naik golf cart? Berapa caddy untuk satu grup?"],
+  "g:tip": ["How much is the usual caddy tip, and how is it paid?", "Biasanya berapa tip untuk caddy, dan bagaimana cara membayarnya?"],
+  "g:dress": ["What is the dress code?", "Bagaimana aturan berpakaiannya?"],
+  "g:rain": ["Where do players wait if play is suspended for lightning or heavy rain?", "Di mana pemain menunggu jika permainan dihentikan karena petir atau hujan lebat?"],
+  "hq:twin": ["Do you have twin rooms?", "Apakah ada kamar twin?"],
+  "hq:cat": ["What is the official name of this room category?", "Apa nama resmi tipe kamar ini?"],
+  "hq:bf": ["Where is breakfast served, and from what time?", "Sarapan disajikan di mana, dan mulai jam berapa?"],
+  "hq:bag": ["Can you store golf bags?", "Apakah bisa menitipkan tas golf?"],
+  "hq:late": ["Can guests check in late at night or early in the morning? How much is early check-in?", "Apakah bisa check-in tengah malam atau pagi-pagi sekali? Berapa biaya early check-in?"],
+  "hq:out": ["Can guests check out and settle the bill between 3:00 and 4:00 a.m.?", "Apakah bisa check-out dan menyelesaikan pembayaran antara jam 3.00 dan 4.00 pagi?"],
+  "hq:bfe": ["What is the earliest breakfast time? Can you prepare breakfast boxes for a 5:45 a.m. departure?", "Sarapan paling awal jam berapa? Apakah bisa disiapkan breakfast box untuk keberangkatan jam 5.45 pagi?"],
+  "hq:spa": ["What are the opening hours and prices of the pool and spa?", "Jam buka dan harga kolam renang serta spa bagaimana?"],
+  "hq:barq": ["What are the bar's opening hours and number of seats? Is smoking allowed?", "Bar buka jam berapa dan ada berapa kursi? Apakah boleh merokok?"],
+  "lunch:kinka_q": ["How many people fit in your private room? How do we reserve, and what is the budget per person?", "Ruang privatnya untuk berapa orang? Bagaimana cara reservasi, dan berapa kisaran harga per orang?"],
+  "lunch:busaba_q": SEATS, "lunch:bistecca_q": SEATS, "lunch:haidilao_q": SEATS,
+  "after28:hours": HOURS, "after28:book": BOOK, "after28:smoke": SMOKEIN, "after28:price": PRICE,
+  "hospital:lang": ["Do you have staff who speak Japanese or English?", "Apakah ada staf yang bisa berbahasa Jepang atau Inggris?"],
+  "hospital:h24": ["Is your emergency department open 24 hours?", "Apakah IGD buka 24 jam?"],
+  "hospital:pay": ["Do you accept credit cards, and cashless service with overseas travel insurance?", "Apakah menerima kartu kredit, dan layanan cashless dengan asuransi perjalanan luar negeri?"],
+  "pik:talassa_q": SEATS, "sight:batavia": SEATS
+};
+var YN = {"v:avail":1, "v:private":1, "v:hold":1, "v:halal":1, "v:a_book":1, "v:a_smoke":1, "hq:twin":1, "hq:bag":1, "airport_in:term":1, "after28:book":1, "after28:smoke":1, "hospital:lang":1, "hospital:h24":1};
+function kind(pl){ return pl.venue ? "v" : (pl.id.indexOf("golf") === 0 ? "g" : pl.id); }
+function phrase(pl, item){ return PH[kind(pl) + ":" + item.id] || null; }
+function isYn(pl, item){ return !!YN[kind(pl) + ":" + item.id]; }
+
 /* ---------- state ---------- */
-var APP_VERSION = "7";
+var APP_VERSION = "8";
 var LS = "gencho-jkt-2026-local";
-var state = {};      // pid -> {i:{iid:{d,v,f}}, note, rank}
+var state = {};      // this device's own entries: pid -> {i:{iid:{d,dt,v,vt,by,f}}, note, rank, o}
+var peers = {};      // other devices' entries, kept whole: dev -> {who, at, state}
 var filter = "all", openId = null, saveOk = true, idb = null;
 var mirrorTimer = null, mirrorVal = null;
-var who = "";
-try{ who = localStorage.getItem(LS + "-who") || ""; }catch(e){}
+var view = "home", curPid = null, todoOnly = false, homeScroll = 0;
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k, v){ try{ localStorage.setItem(k, v); return true; }catch(e){ return false; } }
+function lsJson(k, d){ try{ var o = JSON.parse(lsGet(k) || "null"); return (o && typeof o === "object") ? o : d; }catch(e){ return d; } }
+var who = lsGet(LS + "-who") || "";
+var devId = lsGet(LS + "-dev");
+if (!/^[a-z0-9]{8,40}$/.test(devId || "")) { devId = "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); lsSet(LS + "-dev", devId); }
+var lastChange = +lsGet(LS + "-at") || 0;
+var timers = lsJson(LS + "-timers", {});
 
 function loadLocal(){
   try{
@@ -467,20 +616,129 @@ function mirror(s){
     idbPut("kv", "state", mirrorVal).then(function(){ if (!saveOk) { saveOk = true; showStatus(); } }, function(){});
   }, 800);
 }
-function saveLocal(){
+function saveLocal(quiet){
   var s = JSON.stringify({state:state, open:openId});
   try{ localStorage.setItem(LS, s); saveOk = true; }catch(e){ saveOk = false; }
   mirror(s);
+  if (!quiet) { lastChange = Date.now(); lsSet(LS + "-at", String(lastChange)); }
+}
+function savePeers(){
+  var s = JSON.stringify(peers);
+  lsSet(LS + "-peers", s);
+  if (idb) idbPut("kv", "peers", s).then(null, function(){});
 }
 function st(pid){ if (!state[pid]) state[pid] = {i:{}, note:"", rank:""}; if (!state[pid].i) state[pid].i = {}; return state[pid]; }
 function cell(pid, iid){ var s = st(pid); return s.i[iid] || {}; }
 function val(pid, iid){ var c = cell(pid, iid); return typeof c.v === "string" ? c.v : ""; }
-function isDone(pid, item){
+function files(pid, iid){ var c = cell(pid, iid); return Array.isArray(c.f) ? c.f : []; }
+function placeById(pid){ for (var i = 0; i < PLACES.length; i++) if (PLACES[i].id === pid) return PLACES[i]; return null; }
+function label(pl){ return pl.name + (pl.venue && shown(pl.id, "name") ? " " + shown(pl.id, "name") : ""); }
+
+/* ---------- everyone's entries ---------- */
+function peerList(){
+  return Object.keys(peers).filter(function(d){ return d !== devId && peers[d] && peers[d].state && typeof peers[d].state === "object"; })
+    .map(function(d){ return {dev:d, who: String(peers[d].who || "別端末"), at: +peers[d].at || 0, state: peers[d].state}; });
+}
+function peerCell(p, pid, iid){
+  var s = p.state[pid]; var c = s && s.i && s.i[iid];
+  return (c && typeof c === "object") ? c : null;
+}
+// text answers written by other people, every one kept
+function otherTexts(pid, iid){
+  var out = [], seen = {}, mine = val(pid, iid);
+  function add(w, v, t){
+    if (typeof v !== "string" || !v.trim()) return;
+    w = String(w || "別端末");
+    var k = w + "\n" + v;
+    if (seen[k] || (v === mine && w === who)) return;
+    seen[k] = 1; out.push({who:w, v:v, vt:+t || 0});
+  }
+  var own = cell(pid, iid).alt;
+  (Array.isArray(own) ? own : []).forEach(function(a){ if (a) add(a.by, a.v, a.vt); });
+  peerList().forEach(function(p){
+    var c = peerCell(p, pid, iid); if (!c) return;
+    add(c.by || p.who, c.v, c.vt);
+    (Array.isArray(c.alt) ? c.alt : []).forEach(function(a){ if (a && a.by !== who) add(a.by, a.v, a.vt); });
+  });
+  return out;
+}
+function otherChecks(pid, iid){
+  var out = [];
+  peerList().forEach(function(p){
+    var c = peerCell(p, pid, iid);
+    if (c && (c.d || (Array.isArray(c.f) && c.f.length))) out.push({who: String(c.by || p.who), dt: +c.dt || 0});
+  });
+  return out;
+}
+function otherFiles(pid, iid){
+  var out = [], have = {};
+  files(pid, iid).forEach(function(x){ if (x) have[fkey(x)] = 1; });
+  peerList().forEach(function(p){
+    var c = peerCell(p, pid, iid);
+    (c && Array.isArray(c.f) ? c.f : []).forEach(function(x){
+      if (!x || typeof x !== "object" || have[fkey(x)]) return;
+      have[fkey(x)] = 1; out.push({who: String(x.by || p.who), x:x});
+    });
+  });
+  return out;
+}
+function otherNotes(pid){
+  var out = [];
+  peerList().forEach(function(p){
+    var s = p.state[pid];
+    if (s && typeof s.note === "string" && s.note.trim()) out.push({who:p.who, v:s.note.trim()});
+  });
+  return out;
+}
+function otherRanks(pid){
+  var out = [];
+  peerList().forEach(function(p){
+    var s = p.state[pid];
+    if (s && typeof s.rank === "string" && RANK[s.rank]) out.push({who:p.who, v:RANK[s.rank]});
+  });
+  return out;
+}
+// one line for tables: the single value, or everyone's values with names when they differ
+function shown(pid, iid){
+  var mine = val(pid, iid).trim(), all = [], seen = {};
+  if (mine) { all.push({who: who || "この端末", v: mine}); seen[mine] = 1; }
+  otherTexts(pid, iid).forEach(function(o){ var v = o.v.trim(); if (!seen[v]) { seen[v] = 1; all.push({who:o.who, v:v}); } });
+  if (!all.length) return "";
+  if (all.length === 1) return all[0].v;
+  return all.map(function(a){ return a.v + "(" + a.who + ")"; }).join(" / ");
+}
+function shownNote(pid){
+  var mine = (st(pid).note || "").trim(), os = otherNotes(pid);
+  if (!os.length) return mine;
+  return (mine ? [mine + "(" + (who || "この端末") + ")"] : []).concat(os.map(function(o){ return o.v + "(" + o.who + ")"; })).join(" / ");
+}
+function mineDone(pid, item){
   var c = cell(pid, item.id);
   if (item.t === P) return !!c.d || (Array.isArray(c.f) && c.f.length > 0);
   return typeof c.v === "string" && c.v.trim() !== "";
 }
-function files(pid, iid){ var c = cell(pid, iid); return Array.isArray(c.f) ? c.f : []; }
+function isDone(pid, item){
+  if (mineDone(pid, item)) return true;
+  if (item.t === P) return otherChecks(pid, item.id).length > 0;
+  return otherTexts(pid, item.id).length > 0;
+}
+function counts(pl){
+  var n = 0, total = 0;
+  pl.items.forEach(function(item){ if (item.opt) return; total++; if (isDone(pl.id, item)) n++; });
+  return {n:n, total:total};
+}
+function entryCount(s){
+  var n = 0;
+  Object.keys(s || {}).forEach(function(pid){
+    var p = s[pid] || {};
+    Object.keys(p.i || {}).forEach(function(k){
+      var c = p.i[k] || {};
+      if (c.d || (typeof c.v === "string" && c.v.trim()) || (Array.isArray(c.f) && c.f.length)) n++;
+    });
+    if (typeof p.note === "string" && p.note.trim()) n++;
+  });
+  return n;
+}
 
 /* ---------- device storage ---------- */
 function openDb(){
@@ -557,11 +815,16 @@ function shrink(f){
 function newId(){ return "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
 function okId(id){ return /^[A-Za-z0-9_-]{8,64}$/.test(String(id || "")); }
 function fkey(x){ return x && x.id ? String(x.id) : "r:" + (x && x.n) + ":" + (x && x.t); }
+function z2(n){ return (n < 10 ? "0" : "") + n; }
 function fmtTime(t){
   if (!t) return "";
   var d = new Date(t); if (isNaN(d.getTime())) return "";
-  function z(n){ return (n < 10 ? "0" : "") + n; }
-  return (d.getMonth() + 1) + "/" + d.getDate() + " " + z(d.getHours()) + ":" + z(d.getMinutes());
+  return (d.getMonth() + 1) + "/" + d.getDate() + " " + z2(d.getHours()) + ":" + z2(d.getMinutes());
+}
+function fmtFull(t){
+  if (!t) return "";
+  var d = new Date(t); if (isNaN(d.getTime())) return "";
+  return d.getFullYear() + "-" + z2(d.getMonth() + 1) + "-" + z2(d.getDate()) + " " + z2(d.getHours()) + ":" + z2(d.getMinutes()) + ":" + z2(d.getSeconds());
 }
 function addEntry(pid, iid, entry){
   var s = st(pid), c = JSON.parse(JSON.stringify(s.i[iid] || {}));
@@ -612,70 +875,76 @@ function blobUrl(id){
     return u;
   }, function(){ return null; });
 }
-function buildMedia(pl, iid){
-  var wrap = el("div", "mediawrap");
-  var box = el("div", "media"); box.dataset.media = iid;
-  box.appendChild(el("div", "thumbs"));
+// a photo taken on another device: use the copy on this device, or fetch it from the shared store
+function peerBlobUrl(id){
+  return blobUrl(id).then(function(u){
+    if (u || !syncUrl || !idb || !navigator.onLine) return u;
+    return post({op:"getphoto", id:id}).then(function(r){
+      if (!r || !r.ok || !r.b64) return null;
+      return idbPut("files", id, {buf: unb64(r.b64), type:"image/jpeg"}).then(function(){ return blobUrl(id); });
+    }, function(){ return null; });
+  });
+}
+function mediaInput(pl, iid, cls, text, msg){
   var inp = el("input", "fileinput"); inp.type = "file"; inp.accept = "image/*,video/*"; inp.multiple = true;
   inp.id = "up-" + pl.id + "-" + iid;
-  var add = el("label", "add", "写真と動画を追加"); add.htmlFor = inp.id;
-  var msg = el("div", "upmsg"); msg.setAttribute("aria-live", "polite");
+  var add = el("label", cls, text); add.htmlFor = inp.id;
   inp.addEventListener("change", function(){
     var fs = Array.prototype.slice.call(inp.files || []);
     inp.value = "";
     addFiles(pl.id, iid, fs, msg);
   });
-  box.appendChild(inp); box.appendChild(add);
-  wrap.appendChild(box); wrap.appendChild(msg);
-  return wrap;
+  return [inp, add];
 }
 function renderMedia(pid){
-  Array.prototype.forEach.call(cardEls[pid].querySelectorAll("[data-media]"), function(box){
-    var iid = box.dataset.media, fs = files(pid, iid);
-    var sig = "s:" + fs.map(fkey).join(",");
+  var root = document.getElementById("v-place");
+  Array.prototype.forEach.call(root.querySelectorAll("[data-media]"), function(box){
+    var iid = box.dataset.media, fs = files(pid, iid), os = otherFiles(pid, iid);
+    var sig = "s:" + fs.map(fkey).join(",") + "|" + os.map(function(o){ return fkey(o.x); }).join(",");
     if (box.dataset.sig === sig) return;
     box.dataset.sig = sig;
-    var list = box.querySelector(".thumbs"); list.textContent = "";
-    fs.forEach(function(x){
+    box.textContent = "";
+    function add(x, owner){
       if (!x) return;
       var hasFile = okId(x.id);
       if (!hasFile && !x.r) return;
       var fig = el("div", "fig");
-      var b = el("button", "thumb"); b.type = "button";
+      var b = el("button", "thumb" + (owner ? " peer" : "")); b.type = "button";
       if (!hasFile) { b.textContent = x.k === "v" ? "動画 記録のみ" : "写真 記録のみ"; b.classList.add("rec"); }
       else {
         var im = el("img"); im.alt = ""; b.appendChild(im);
-        blobUrl(x.id).then(function(u){ if (u) im.src = u; else { b.textContent = "写真なし"; b.classList.add("rec"); } });
+        blobUrl(x.id).then(function(u){ if (u) im.src = u; else { b.textContent = owner ? "タップで表示" : "写真なし"; b.classList.add("rec"); } });
       }
-      b.setAttribute("aria-label", (x.k === "v" ? "動画" : "写真") + " " + (x.n || "") + " を開く");
-      b.addEventListener("click", function(){ openViewer(pid, iid, x); });
+      b.setAttribute("aria-label", (x.k === "v" ? "動画" : "写真") + " " + (x.n || "") + (owner ? " " + owner : "") + " を開く");
+      b.addEventListener("click", function(){ openViewer(pid, iid, x, owner); });
       fig.appendChild(b);
-      if (x.n) fig.appendChild(el("div", "cap", x.n));
-      list.appendChild(fig);
-    });
+      fig.appendChild(el("div", "cap", (owner ? owner + " " : "") + (x.n || "")));
+      box.appendChild(fig);
+    }
+    fs.forEach(function(x){ add(x, ""); });
+    os.forEach(function(o){ add(o.x, o.who); });
   });
 }
-function closeMedia(pid){
-  Array.prototype.forEach.call(cardEls[pid].querySelectorAll("[data-media]"), function(box){
-    if (!box.dataset.sig) return;
-    box.dataset.sig = "";
-    box.querySelector(".thumbs").textContent = "";
-    files(pid, box.dataset.media).forEach(function(x){
-      if (x && x.id && urls[x.id]) { URL.revokeObjectURL(urls[x.id]); delete urls[x.id]; }
-    });
-  });
+function dropUrls(){
+  Object.keys(urls).forEach(function(k){ URL.revokeObjectURL(urls[k]); delete urls[k]; });
 }
 var viewing = null;
-function openViewer(pid, iid, x){
-  viewing = {pid:pid, iid:iid, key:fkey(x), id: okId(x.id) ? x.id : null, armed:false};
+function openViewer(pid, iid, x, owner){
+  viewing = {pid:pid, iid:iid, key:fkey(x), id: okId(x.id) ? x.id : null, armed:false, peer: !!owner};
   var stage = document.getElementById("vstage"); stage.textContent = "";
   if (!viewing.id) stage.appendChild(el("p", "vnote", "本体はカメラロールにあります"));
   else {
     var m = el("img"); m.alt = "写真"; stage.appendChild(m);
-    blobUrl(x.id).then(function(u){ if (u) m.src = u; });
+    var id = x.id;
+    (owner ? peerBlobUrl(id) : blobUrl(id)).then(function(u){
+      if (!viewing || viewing.id !== id) return;
+      if (u) { m.src = u; if (owner && curPid === pid) { var b = document.querySelector('#v-place [data-media="' + iid + '"]'); if (b) { b.dataset.sig = ""; renderMedia(pid); } } }
+      else { stage.textContent = ""; stage.appendChild(el("p", "vnote", owner ? "この写真はまだこの端末にありません。電波のある場所で開くと表示できます。" : "写真を開けませんでした")); }
+    });
   }
-  document.getElementById("vname").textContent = [x.n || "", fmtTime(x.t)].filter(Boolean).join("  ");
-  document.getElementById("vdel").textContent = "削除";
+  document.getElementById("vname").textContent = [owner || "", x.n || "", fmtTime(x.t)].filter(Boolean).join("  ");
+  var del = document.getElementById("vdel");
+  del.textContent = "削除"; del.classList.toggle("hidden", !!owner);
   document.getElementById("viewer").classList.remove("hidden");
   document.getElementById("vclose").focus();
 }
@@ -688,199 +957,446 @@ function closeViewer(){
 /* ---------- saving ---------- */
 function changed(pid){
   saveLocal();
-  refresh(pid);
+  if (view === "place" && curPid === pid) updatePlace();
+  totals();
   showStatus();
+  scheduleSync(4000);
 }
 function showStatus(){
   var e = document.getElementById("status");
   e.className = "status";
-  if (saveOk) { e.textContent = "この端末に保存済み"; e.classList.add("ok"); }
-  else { e.textContent = "保存できていません"; e.classList.add("warn"); }
+  if (!saveOk) { e.textContent = "保存できていません"; e.classList.add("warn"); return; }
+  if (!syncUrl) { e.textContent = "この端末に保存済み"; e.classList.add("ok"); return; }
+  var pending = lastChange > pushedAt || pendingPhotos().length > 0;
+  if (syncing) { e.textContent = "送信中"; }
+  else if (pending) { e.textContent = navigator.onLine ? "未送信あり" : "電波待ち(端末に保存済み)"; e.classList.add("warn"); }
+  else { e.textContent = "全員分を集約済み" + (lastSync ? " " + fmtTime(lastSync).split(" ")[1] : ""); e.classList.add("ok"); }
 }
-
+var toastTimer = null;
+function toast(t){
+  var e = document.getElementById("toast");
+  e.textContent = t; e.classList.remove("hidden");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ e.classList.add("hidden"); }, 2200);
+}
 
 /* ---------- build ---------- */
-var cardEls = {};
 function el(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
-
-function build(){
-  var root = document.getElementById("cards");
-  PLACES.forEach(function(pl){
-    var card = el("section", "card"); card.dataset.pid = pl.id;
-    var head = el("button", "head"); head.type = "button";
-    head.setAttribute("aria-expanded", "false");
-    var name = el("span", "name", pl.name);
-    if (pl.sub) name.appendChild(el("span", "sub", pl.sub));
-    if (pl.venue) { var vs = el("span", "sub", ""); vs.dataset.role = "vname"; name.appendChild(vs); }
-    head.appendChild(name);
-    head.appendChild(el("span", "badge " + (pl.must ? "must" : "opt"), pl.must ? "必須" : "できれば"));
-    var cnt = el("span", "count", ""); cnt.dataset.role = "count"; head.appendChild(cnt);
-    head.appendChild(el("span", "chev"));
-    head.addEventListener("click", function(){ toggle(pl.id); });
-    card.appendChild(head);
-
-    var body = el("div", "body");
-    body.appendChild(el("p", "first", "最初に看板か入口を1枚撮る"));
-    var groups = [], byName = {};
-    pl.items.forEach(function(item){
-      var g = item.g || GROUP_NAME[item.t];
-      if (!byName[g]) { byName[g] = []; groups.push(g); }
-      byName[g].push(item);
-    });
-    groups.forEach(function(g){
-      var gw = el("div", "group");
-      gw.appendChild(el("div", "glabel", g));
-      var rows = el("div", "rows");
-      byName[g].forEach(function(item){ rows.appendChild(buildRow(pl, item)); });
-      gw.appendChild(rows); body.appendChild(gw);
-    });
-    if (pl.venue){
-      var rg = el("div", "group"); rg.appendChild(el("div", "glabel", "推薦順"));
-      var sel = el("select"); sel.id = "rank-" + pl.id; sel.setAttribute("aria-label", pl.name + "の推薦順");
-      [["","未定"],["1","1位"],["2","2位"],["3","3位"],["4","4位"],["x","条件を満たさない"]].forEach(function(o){
-        var op = el("option", null, o[1]); op.value = o[0]; sel.appendChild(op);
+function groupsOf(pl){
+  var groups = [], byName = {};
+  pl.items.forEach(function(item){
+    var g = item.g || GROUP_NAME[item.t];
+    if (!byName[g]) { byName[g] = []; groups.push(g); }
+    byName[g].push(item);
+  });
+  return groups.map(function(g){ return {name:g, items:byName[g]}; });
+}
+function placeRow(pl, cls){
+  var c = counts(pl);
+  var b = el("button", "prow" + (cls ? " " + cls : "")); b.type = "button";
+  if (c.total > 0 && c.n === c.total) b.classList.add("complete");
+  var name = el("span", "name", pl.name);
+  var sub = [pl.sub || "", pl.venue ? shown(pl.id, "name") : ""].filter(Boolean).join(" ");
+  if (sub) name.appendChild(el("span", "sub", sub));
+  b.appendChild(name);
+  b.appendChild(el("span", "count", c.n + "/" + c.total));
+  b.appendChild(el("span", "arrow"));
+  b.addEventListener("click", function(){ openPlace(pl.id); });
+  return b;
+}
+function renderHome(){
+  var root = document.getElementById("homelist"); root.textContent = "";
+  var q = document.getElementById("q").value.trim().toLowerCase();
+  document.getElementById("whowarn").classList.toggle("hidden", !!who);
+  if (q) {
+    var hits = el("div", "list"), n = 0;
+    root.appendChild(el("div", "sect", "見つかった項目"));
+    PLACES.forEach(function(pl){
+      var plHit = (pl.name + " " + (pl.sub || "") + " " + shown(pl.id, "name")).toLowerCase().indexOf(q) >= 0;
+      if (plHit) { hits.appendChild(placeRow(pl)); n++; }
+      pl.items.forEach(function(item){
+        if (n >= 60 || item.l.toLowerCase().indexOf(q) < 0) return;
+        var b = el("button", "prow hit"); b.type = "button";
+        if (isDone(pl.id, item)) b.classList.add("complete");
+        var name = el("span", "name", item.l);
+        name.appendChild(el("span", "sub", label(pl) + " / " + (item.g || GROUP_NAME[item.t])));
+        b.appendChild(name); b.appendChild(el("span", "arrow"));
+        b.addEventListener("click", function(){ openPlace(pl.id, item.id); });
+        hits.appendChild(b); n++;
       });
-      sel.addEventListener("change", function(){ st(pl.id).rank = sel.value; changed(pl.id); });
-      rg.appendChild(sel); body.appendChild(rg);
-    }
-    var xg = el("div", "group"); xg.appendChild(el("div", "glabel", "そのほかの写真と動画"));
-    var xr = el("div", "row"); xr.style.paddingTop = "10px"; xr.appendChild(buildMedia(pl, "_x"));
-    xg.appendChild(xr); body.appendChild(xg);
-    var ng = el("div", "group");
-    var nl = el("label", "glabel", "所感(報告に載せる一言)"); nl.htmlFor = "note-" + pl.id;
-    var ta = el("textarea"); ta.id = "note-" + pl.id;
-    ta.addEventListener("input", function(){ st(pl.id).note = ta.value; changed(pl.id); });
-    ng.appendChild(nl); ng.appendChild(ta); body.appendChild(ng);
-    card.appendChild(body);
-    root.appendChild(card);
-    cardEls[pl.id] = card;
+    });
+    if (!n) hits.appendChild(el("p", "tip", "見つかりませんでした。"));
+    root.appendChild(hits);
+    return;
+  }
+  var last = openId && placeById(openId);
+  if (last) {
+    root.appendChild(el("div", "sect", "続きから"));
+    var l0 = el("div", "list"); l0.appendChild(placeRow(last, "resume")); root.appendChild(l0);
+  }
+  [["必須の場所", true], ["できれば行く場所", false]].forEach(function(sec){
+    if (filter === "must" && !sec[1]) return;
+    var list = el("div", "list"), n = 0;
+    PLACES.forEach(function(pl){
+      if (pl.must !== sec[1]) return;
+      var c = counts(pl);
+      if (filter === "todo" && c.total > 0 && c.n === c.total) return;
+      list.appendChild(placeRow(pl)); n++;
+    });
+    if (!n) return;
+    root.appendChild(el("div", "sect", sec[0]));
+    root.appendChild(list);
   });
 }
+function setCell(pid, iid, fn){
+  var s = st(pid), c = JSON.parse(JSON.stringify(s.i[iid] || {}));
+  fn(c);
+  s.i[iid] = c;
+  changed(pid);
+}
+function setText(pid, iid, v){
+  setCell(pid, iid, function(c){ c.v = v; c.vt = Date.now(); c.by = who; });
+}
+var QUICK = ["はい", "いいえ", "要確認"];
+function quickOf(v){ for (var i = 0; i < QUICK.length; i++) if (v === QUICK[i] || v.indexOf(QUICK[i] + " ") === 0) return QUICK[i]; return ""; }
 function buildRow(pl, item){
   var row = el("div", "row"); row.dataset.iid = item.id;
   var fid = "f-" + pl.id + "-" + item.id;
   if (item.t === P){
+    var line = el("div", "rline");
     var b = el("button", "tap"); b.type = "button"; b.id = fid;
     b.setAttribute("aria-pressed", "false");
     b.appendChild(el("span", "box"));
-    var lab = el("span", null, item.l);
+    var lab = el("span", "lab", item.l);
     if (item.opt) lab.appendChild(el("span", "opttag", "できなくても可"));
     b.appendChild(lab);
     b.appendChild(el("span", "when"));
     b.addEventListener("click", function(){
-      var s = st(pl.id); var c = JSON.parse(JSON.stringify(s.i[item.id] || {}));
-      c.d = !c.d;
-      if (c.d) { c.dt = Date.now(); c.by = who; } else { delete c.dt; delete c.by; }
-      s.i[item.id] = c;
-      changed(pl.id);
+      row.classList.add("keep");
+      setCell(pl.id, item.id, function(c){
+        c.d = !c.d;
+        if (c.d) { c.dt = Date.now(); c.by = who; } else { delete c.dt; delete c.by; }
+      });
     });
-    row.appendChild(b);
-    row.appendChild(buildMedia(pl, item.id));
+    line.appendChild(b);
+    var msg = el("div", "upmsg"); msg.setAttribute("aria-live", "polite");
+    mediaInput(pl, item.id, "plus", "写真を追加", msg).forEach(function(n){ line.appendChild(n); });
+    row.appendChild(line);
+    var box = el("div", "media"); box.dataset.media = item.id; row.appendChild(box);
+    row.appendChild(msg);
+    row.appendChild(el("div", "others"));
   } else {
     var f = el("div", "field");
+    var fl = el("div", "flabel");
     var l = el("label", null, item.l); l.htmlFor = fid;
     if (item.opt) l.appendChild(el("span", "opttag", "できなくても可"));
-    f.appendChild(l);
+    fl.appendChild(l);
+    var ph = phrase(pl, item);
+    if (ph) {
+      var sb = el("button", "mini", "相手に見せる"); sb.type = "button";
+      sb.addEventListener("click", function(){ openShow(item.l, ph); });
+      fl.appendChild(sb);
+    }
+    f.appendChild(fl);
     var inp = el("input"); inp.type = "text"; inp.id = fid; inp.autocomplete = "off";
     if (item.t === M) inp.inputMode = "decimal";
-    inp.addEventListener("input", function(){
-      var pc = cell(pl.id, item.id), nc = {v: inp.value, vt: Date.now(), by: who};
-      if (Array.isArray(pc.alt)) nc.alt = pc.alt;
-      st(pl.id).i[item.id] = nc;
-      changed(pl.id);
-    });
-    if (item.u){
-      var wrap = el("div", "inline"); wrap.appendChild(inp); wrap.appendChild(el("span", null, item.u)); f.appendChild(wrap);
-    } else f.appendChild(inp);
-    f.appendChild(el("div", "alt"));
+    inp.addEventListener("focus", function(){ row.classList.add("keep"); });
+    inp.addEventListener("input", function(){ setText(pl.id, item.id, inp.value); });
+    if (isYn(pl, item)) {
+      var qk = el("div", "quick"); qk.setAttribute("role", "group"); qk.setAttribute("aria-label", item.l);
+      QUICK.forEach(function(w){
+        var cb = el("button", "chip", w); cb.type = "button"; cb.dataset.quick = w; cb.setAttribute("aria-pressed", "false");
+        cb.addEventListener("click", function(){
+          row.classList.add("keep");
+          var cur = val(pl.id, item.id), had = quickOf(cur);
+          var rest = had ? cur.slice(had.length).trim() : cur.trim();
+          var nv = (had === w) ? rest : w + (rest ? " " + rest : "");
+          inp.value = nv;
+          setText(pl.id, item.id, nv);
+        });
+        qk.appendChild(cb);
+      });
+      f.appendChild(qk);
+      inp.placeholder = "補足(人数、条件など)";
+    }
+    var wrap = el("div", "inline"); wrap.appendChild(inp);
+    if (item.u) wrap.appendChild(el("span", null, item.u));
+    if (item.t === M && item.u === "分") {
+      var tb = el("button", "mini", "計測開始"); tb.type = "button"; tb.dataset.timer = pl.id + ":" + item.id;
+      tb.addEventListener("click", function(){
+        var key = pl.id + ":" + item.id;
+        row.classList.add("keep");
+        if (timers[key]) {
+          var min = Math.max(1, Math.round((Date.now() - timers[key]) / 60000));
+          delete timers[key]; lsSet(LS + "-timers", JSON.stringify(timers));
+          inp.value = String(min);
+          setText(pl.id, item.id, String(min));
+          toast(min + "分を記録しました");
+        } else {
+          timers[key] = Date.now(); lsSet(LS + "-timers", JSON.stringify(timers));
+          toast("計測を始めました。アプリを閉じても続きます");
+        }
+        tick();
+      });
+      wrap.appendChild(tb);
+    }
+    f.appendChild(wrap);
+    f.appendChild(el("div", "others"));
     row.appendChild(f);
   }
   return row;
 }
-
-/* ---------- render ---------- */
-function toggle(pid){
-  openId = (openId === pid) ? null : pid;
-  if (openId) {
-    var so = st(openId);
-    if (!Array.isArray(so.o)) so.o = [];
-    so.o.push(Date.now());
-    if (so.o.length > 30) so.o.splice(1, so.o.length - 30);
-  }
-  saveLocal();
-  PLACES.forEach(function(pl){
-    var c = cardEls[pl.id], on = pl.id === openId;
-    c.classList.toggle("open", on);
-    c.querySelector(".head").setAttribute("aria-expanded", on ? "true" : "false");
-  });
-  PLACES.forEach(function(pl){ if (pl.id !== openId) closeMedia(pl.id); });
-  if (openId) {
-    renderMedia(openId);
-    var top = cardEls[openId].getBoundingClientRect().top + window.pageYOffset - document.querySelector("header.top").offsetHeight - 8;
-    window.scrollTo(0, Math.max(0, top));
-  }
-  applyFilter();
+function otherLine(whoName, text, t){
+  var d = el("div", "other");
+  d.appendChild(el("b", null, whoName));
+  d.appendChild(document.createTextNode(text ? " " + text : ""));
+  if (t) d.appendChild(el("span", null, fmtTime(t)));
+  return d;
 }
-function refresh(pid){
-  var pl = PLACES.filter(function(p){ return p.id === pid; })[0];
+function renderPlace(){
+  var pl = placeById(curPid), root = document.getElementById("v-place");
+  root.textContent = "";
   if (!pl) return;
-  var card = cardEls[pid], n = 0, total = 0;
+  root.classList.toggle("todo-only", todoOnly);
+  root.appendChild(el("p", "first", "最初に看板か入口を1枚撮ってください。写真はカメラアプリで撮り、あとから各項目の右のボタンで選べます。"));
+  var jump = document.getElementById("jump"); jump.textContent = "";
+  var tg = el("button", "chip", "未完了のみ"); tg.type = "button"; tg.setAttribute("aria-pressed", todoOnly ? "true" : "false");
+  tg.addEventListener("click", function(){
+    todoOnly = !todoOnly;
+    tg.setAttribute("aria-pressed", todoOnly ? "true" : "false");
+    Array.prototype.forEach.call(root.querySelectorAll(".row.keep"), function(r){ r.classList.remove("keep"); });
+    root.classList.toggle("todo-only", todoOnly);
+  });
+  jump.appendChild(tg);
+  groupsOf(pl).forEach(function(g, gi){
+    var gw = el("div", "group"); gw.id = "g-" + gi; gw.dataset.group = String(gi);
+    gw.appendChild(el("div", "glabel", g.name));
+    var rows = el("div", "rows");
+    g.items.forEach(function(item){ rows.appendChild(buildRow(pl, item)); });
+    gw.appendChild(rows); root.appendChild(gw);
+    var jb = el("button", "chip", g.name); jb.type = "button"; jb.dataset.jump = String(gi);
+    jb.addEventListener("click", function(){ gw.scrollIntoView({block:"start"}); });
+    jump.appendChild(jb);
+  });
+  if (pl.venue){
+    var rg = el("div", "group");
+    var rl = el("label", "glabel", "推薦順"); rl.htmlFor = "rank-" + pl.id; rg.appendChild(rl);
+    var sel = el("select"); sel.id = "rank-" + pl.id;
+    [["","未定"],["1","1位"],["2","2位"],["3","3位"],["4","4位"],["x","条件を満たさない"]].forEach(function(o){
+      var op = el("option", null, o[1]); op.value = o[0]; sel.appendChild(op);
+    });
+    sel.addEventListener("change", function(){ st(pl.id).rank = sel.value; changed(pl.id); });
+    rg.appendChild(sel);
+    var ro = el("div", "others"); ro.id = "rank-others"; ro.style.padding = "8px 0 0"; rg.appendChild(ro);
+    root.appendChild(rg);
+  }
+  var xg = el("div", "group"); xg.appendChild(el("div", "glabel", "そのほかの写真と動画"));
+  var xr = el("div", "row"); xr.dataset.iid = "_x";
+  var xmsg = el("div", "upmsg"); xmsg.setAttribute("aria-live", "polite");
+  var xl = el("div", "rline"); xl.style.padding = "6px 0 6px 12px";
+  mediaInput(pl, "_x", "plus", "写真と動画を追加", xmsg).forEach(function(n){ xl.appendChild(n); });
+  xr.appendChild(xl);
+  var xb = el("div", "media"); xb.dataset.media = "_x"; xr.appendChild(xb); xr.appendChild(xmsg);
+  xg.appendChild(xr); root.appendChild(xg);
+  var ng = el("div", "group");
+  var nl = el("label", "glabel", "所感(報告に載せる一言)"); nl.htmlFor = "note-" + pl.id;
+  var ta = el("textarea"); ta.id = "note-" + pl.id;
+  ta.addEventListener("input", function(){ st(pl.id).note = ta.value; changed(pl.id); });
+  ng.appendChild(nl); ng.appendChild(ta);
+  var no = el("div", "others"); no.id = "note-others"; no.style.padding = "8px 0 0"; ng.appendChild(no);
+  root.appendChild(ng);
+  updatePlace();
+}
+function updatePlace(){
+  var pl = placeById(curPid), root = document.getElementById("v-place");
+  if (!pl) return;
+  var pid = pl.id;
+  var gdone = {};
+  groupsOf(pl).forEach(function(g, gi){
+    var n = 0, t = 0;
+    g.items.forEach(function(item){ if (item.opt) return; t++; if (isDone(pid, item)) n++; });
+    gdone[gi] = g.name + " " + n + "/" + t;
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("#jump [data-jump]"), function(b){ b.textContent = gdone[b.dataset.jump]; });
   pl.items.forEach(function(item){
-    var row = card.querySelector('.row[data-iid="' + item.id + '"]');
+    var row = root.querySelector('.row[data-iid="' + item.id + '"]');
+    if (!row) return;
     var d = isDone(pid, item);
-    if (!item.opt) { total++; if (d) n++; }
     row.classList.toggle("done", d);
     var ctl = document.getElementById("f-" + pid + "-" + item.id);
+    var ob = row.querySelector(".others"); ob.textContent = "";
     if (item.t === P) {
-      ctl.setAttribute("aria-pressed", d ? "true" : "false");
-      var wh = row.querySelector(".when");
-      var pcl = cell(pid, item.id);
-      if (wh) wh.textContent = (d && pcl.dt) ? fmtTime(pcl.dt) + (pcl.by && pcl.by !== who ? " " + pcl.by : "") : "";
+      var pcl = cell(pid, item.id), md = mineDone(pid, item);
+      ctl.setAttribute("aria-pressed", md ? "true" : "false");
+      row.querySelector(".when").textContent = (pcl.d && pcl.dt) ? fmtTime(pcl.dt) : "";
+      otherChecks(pid, item.id).forEach(function(o){ ob.appendChild(otherLine(o.who, "済", o.dt)); });
     } else {
-      var al = row.querySelector(".alt"), alts = cell(pid, item.id).alt;
-      if (al) al.textContent = (Array.isArray(alts) && alts.length) ? "ほかの入力: " + alts.map(function(a){ return a.v + "(" + [a.by || "", fmtTime(a.vt)].filter(Boolean).join(" ") + ")"; }).join("、") : "";
+      var v = val(pid, item.id);
+      if (document.activeElement !== ctl && ctl.value !== v) ctl.value = v;
+      var qv = quickOf(v);
+      Array.prototype.forEach.call(row.querySelectorAll("[data-quick]"), function(c){ c.setAttribute("aria-pressed", c.dataset.quick === qv ? "true" : "false"); });
+      otherTexts(pid, item.id).forEach(function(o){ ob.appendChild(otherLine(o.who, o.v, o.vt)); });
     }
-    if (item.t !== P && document.activeElement !== ctl && ctl.value !== val(pid, item.id)) ctl.value = val(pid, item.id);
   });
-  var ta = document.getElementById("note-" + pid);
-  var note = st(pid).note || "";
-  if (document.activeElement !== ta && ta.value !== note) ta.value = note;
+  var ta = document.getElementById("note-" + pid), note = st(pid).note || "";
+  if (ta && document.activeElement !== ta && ta.value !== note) ta.value = note;
+  var no = document.getElementById("note-others");
+  if (no) { no.textContent = ""; otherNotes(pid).forEach(function(o){ no.appendChild(otherLine(o.who, o.v, 0)); }); }
   if (pl.venue){
     var sel = document.getElementById("rank-" + pid);
-    if (document.activeElement !== sel) sel.value = st(pid).rank || "";
-    card.querySelector('[data-role="vname"]').textContent = val(pid, "name");
+    if (sel && document.activeElement !== sel) sel.value = st(pid).rank || "";
+    var ro = document.getElementById("rank-others");
+    if (ro) { ro.textContent = ""; otherRanks(pid).forEach(function(o){ ro.appendChild(otherLine(o.who, o.v, 0)); }); }
   }
-  if (pid === openId) renderMedia(pid);
-  card.querySelector('[data-role="count"]').textContent = n + "/" + total;
-  card.classList.toggle("complete", total > 0 && n === total);
-  card.dataset.n = n; card.dataset.total = total;
-  totals(); tables(); applyFilter();
+  renderMedia(pid);
+  setTitle();
+  tick();
 }
+function setTitle(){
+  var h = document.getElementById("title"); h.textContent = "";
+  if (view === "place") {
+    var pl = placeById(curPid), c = counts(pl);
+    h.appendChild(document.createTextNode(pl.name));
+    h.appendChild(el("small", null, [pl.sub || "", pl.venue ? shown(pl.id, "name") : "", c.n + "/" + c.total + " 済"].filter(Boolean).join("  ")));
+  } else h.textContent = "ジャカルタ現調チェック";
+}
+
+/* ---------- navigation ---------- */
+function go(v){
+  if (view === "home") homeScroll = window.pageYOffset;
+  if (view === "place" && v !== "place") dropUrls();
+  view = v;
+  ["home", "place", "sum", "data"].forEach(function(n){ document.getElementById("v-" + n).classList.toggle("hidden", n !== v); });
+  document.getElementById("tabbar").classList.toggle("hidden", v === "place");
+  document.getElementById("placebar").classList.toggle("hidden", v !== "place");
+  document.getElementById("jump").classList.toggle("hidden", v !== "place");
+  document.querySelector(".barline").classList.toggle("hidden", v === "place");
+  Array.prototype.forEach.call(document.querySelectorAll("#tabbar button"), function(b){
+    if (b.dataset.tab === v) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+  });
+  if (v === "home") { renderHome(); window.scrollTo(0, homeScroll); }
+  if (v === "sum") { tables(); window.scrollTo(0, 0); }
+  if (v === "data") { showSync(); window.scrollTo(0, 0); }
+  setTitle(); totals(); tick();
+}
+function openPlace(pid, iid){
+  var pl = placeById(pid); if (!pl) return;
+  curPid = pid; openId = pid;
+  var so = st(pid);
+  if (!Array.isArray(so.o)) so.o = [];
+  so.o.push(Date.now());
+  if (so.o.length > 30) so.o.splice(1, so.o.length - 30);
+  saveLocal(true);
+  if (iid) todoOnly = false;
+  go("place");
+  renderPlace();
+  window.scrollTo(0, 0);
+  if (iid) {
+    var row = document.querySelector('#v-place .row[data-iid="' + iid + '"]');
+    if (row) { row.scrollIntoView({block:"center"}); row.classList.add("flash"); setTimeout(function(){ row.classList.remove("flash"); }, 1600); }
+  }
+}
+document.getElementById("pb-back").addEventListener("click", function(){ go("home"); });
+document.getElementById("pb-next").addEventListener("click", function(){
+  var pl = placeById(curPid), rows = [], pick = null;
+  pl.items.forEach(function(item){
+    if (item.opt || isDone(pl.id, item)) return;
+    var r = document.querySelector('#v-place .row[data-iid="' + item.id + '"]');
+    if (r) rows.push(r);
+  });
+  if (!rows.length) { toast("この場所はすべて済みです"); return; }
+  var mid = window.innerHeight * 0.45;
+  for (var i = 0; i < rows.length; i++) if (rows[i].getBoundingClientRect().top > mid) { pick = rows[i]; break; }
+  if (!pick) pick = rows[0];
+  pick.scrollIntoView({block:"center"});
+  pick.classList.add("flash"); setTimeout(function(){ pick.classList.remove("flash"); }, 1200);
+});
+document.getElementById("pb-place").addEventListener("click", function(){
+  var i = PLACES.indexOf(placeById(curPid));
+  openPlace(PLACES[(i + 1) % PLACES.length].id);
+});
+Array.prototype.forEach.call(document.querySelectorAll("#tabbar button"), function(b){
+  b.addEventListener("click", function(){ go(b.dataset.tab); });
+});
+document.getElementById("status").addEventListener("click", function(){ go("data"); });
+document.getElementById("q").addEventListener("input", renderHome);
+Array.prototype.forEach.call(document.querySelectorAll("#v-home .chip"), function(ch){
+  ch.addEventListener("click", function(){
+    filter = ch.dataset.f;
+    Array.prototype.forEach.call(document.querySelectorAll("#v-home .chip"), function(o){ o.setAttribute("aria-pressed", o === ch ? "true" : "false"); });
+    renderHome();
+  });
+});
+
+/* ---------- stopwatch ---------- */
+function fmtRun(ms){ var s = Math.max(0, Math.floor(ms / 1000)); return Math.floor(s / 60) + ":" + z2(s % 60); }
+function tick(){
+  var now = Date.now();
+  Array.prototype.forEach.call(document.querySelectorAll("#v-place [data-timer]"), function(b){
+    var t = timers[b.dataset.timer];
+    b.classList.toggle("on", !!t);
+    b.textContent = t ? "停止 " + fmtRun(now - t) : "計測開始";
+  });
+  var box = document.getElementById("timers"), keys = Object.keys(timers);
+  if (view !== "home") return;
+  if (box.children.length !== keys.length) {
+    box.textContent = "";
+    keys.forEach(function(k){
+      var p = k.split(":"), pl = placeById(p[0]); if (!pl) return;
+      var b = el("button", "trun"); b.type = "button"; b.dataset.k = k;
+      b.appendChild(el("span", null, "計測中 " + pl.name));
+      b.appendChild(el("span", "t"));
+      b.addEventListener("click", function(){ openPlace(p[0], p[1]); });
+      box.appendChild(b);
+    });
+  }
+  Array.prototype.forEach.call(box.children, function(b){ var t = timers[b.dataset.k]; b.querySelector(".t").textContent = t ? fmtRun(now - t) : ""; });
+}
+setInterval(tick, 1000);
+
+/* ---------- show a question to staff ---------- */
+function openShow(ja, ph){
+  document.getElementById("show-en").textContent = ph[0];
+  document.getElementById("show-id").textContent = ph[1];
+  document.getElementById("show-ja").textContent = ja;
+  document.getElementById("show").classList.remove("hidden");
+  document.getElementById("show-close").focus();
+}
+document.getElementById("show-close").addEventListener("click", function(){ document.getElementById("show").classList.add("hidden"); });
+
+/* ---------- totals and tables ---------- */
 function totals(){
   var mn = 0, mt = 0, an = 0, at = 0;
   PLACES.forEach(function(pl){
-    var c = cardEls[pl.id], n = +c.dataset.n || 0, t = +c.dataset.total || 0;
-    an += n; at += t; if (pl.must) { mn += n; mt += t; }
+    var c = counts(pl);
+    an += c.n; at += c.total; if (pl.must) { mn += c.n; mt += c.total; }
   });
   document.getElementById("mustline").textContent = "必須 " + mn + "/" + mt;
   document.getElementById("allline").textContent = "全体 " + an + "/" + at;
-  document.getElementById("barfill").style.width = (mt ? Math.round(mn / mt * 100) : 0) + "%";
-}
-function applyFilter(){
-  PLACES.forEach(function(pl){
-    var c = cardEls[pl.id], hide = false;
-    if (filter === "must" && !pl.must) hide = true;
-    if (filter === "todo" && c.classList.contains("complete") && pl.id !== openId) hide = true;
-    c.classList.toggle("hidden", hide);
-  });
+  var f = document.getElementById("barfill");
+  if (view === "place") { var c = counts(placeById(curPid)); f.style.width = (c.total ? Math.round(c.n / c.total * 100) : 0) + "%"; }
+  else f.style.width = (mt ? Math.round(mn / mt * 100) : 0) + "%";
 }
 var RANK = {"1":"1位","2":"2位","3":"3位","4":"4位","x":"条件を満たさない"};
+function shownRank(pid){
+  var mine = RANK[st(pid).rank] || "", os = otherRanks(pid);
+  if (!os.length) return mine;
+  return (mine ? [mine + "(" + (who || "この端末") + ")"] : []).concat(os.map(function(o){ return o.v + "(" + o.who + ")"; })).join(" / ");
+}
 function cmpData(){
   var vs = PLACES.filter(function(p){ return p.venue; });
   var rows = [["項目"].concat(vs.map(function(v){ return v.name.replace("懇親会 ", ""); }))];
-  CMP_ROWS.forEach(function(r){ rows.push([r[1]].concat(vs.map(function(v){ return val(v.id, r[0]); }))); });
-  rows.push(["推薦順"].concat(vs.map(function(v){ return RANK[st(v.id).rank] || ""; })));
-  rows.push(["所感"].concat(vs.map(function(v){ return st(v.id).note || ""; })));
+  CMP_ROWS.forEach(function(r){ rows.push([r[1]].concat(vs.map(function(v){ return shown(v.id, r[0]); }))); });
+  rows.push(["推薦順"].concat(vs.map(function(v){ return shownRank(v.id); })));
+  rows.push(["所感"].concat(vs.map(function(v){ return shownNote(v.id); })));
+  return rows;
+}
+function summaryData(){
+  var rows = [["場所", "所要時間(分)", "確認", "所感"]];
+  PLACES.filter(function(p){ return !p.venue; }).forEach(function(pl){
+    var c = counts(pl);
+    rows.push([pl.name, shown(pl.id, "time"), c.n + "/" + c.total, shownNote(pl.id)]);
+  });
   return rows;
 }
 function fillTable(id, rows){
@@ -898,23 +1414,22 @@ function fillTable(id, rows){
 }
 function tables(){
   fillTable("cmp", cmpData());
-  var rows = [["場所", "所要時間(分)", "確認", "所感"]];
-  PLACES.filter(function(p){ return !p.venue; }).forEach(function(pl){
-    var c = cardEls[pl.id];
-    rows.push([pl.name, val(pl.id, "time"), (c.dataset.n || 0) + "/" + (c.dataset.total || 0), st(pl.id).note || ""]);
-  });
-  fillTable("sum", rows);
+  fillTable("sum", summaryData());
   fillTable("flist", fileData());
 }
 function expName(pid, iid, idx){ return pid + "_" + (iid === "_x" ? "other" : iid) + "_" + (idx + 1) + ".jpg"; }
+function photoItems(pl){ return pl.items.filter(function(x){ return x.t === P; }).concat([{id:"_x", l:"そのほか"}]); }
 function fileData(){
   var rows = [["場所", "項目", "ファイル名", "日時", "保存先", "書き出し名", "追加した時刻", "記録者"]];
   PLACES.forEach(function(pl){
-    var label = pl.name + (pl.venue && val(pl.id, "name") ? " " + val(pl.id, "name") : "");
-    pl.items.filter(function(x){ return x.t === P; }).concat([{id:"_x", l:"そのほか"}]).forEach(function(item){
+    photoItems(pl).forEach(function(item){
       files(pl.id, item.id).forEach(function(x, idx){
         if (!x) return;
-        rows.push([label, item.l, x.n || "(名前なし)", fmtTime(x.t), okId(x.id) ? "アプリ内" : "カメラロールのみ", okId(x.id) ? "photos/" + expName(pl.id, item.id, idx) : "", fmtFull(x.a), x.by || ""]);
+        rows.push([label(pl), item.l, x.n || "(名前なし)", fmtTime(x.t), okId(x.id) ? "アプリ内" : "カメラロールのみ", okId(x.id) ? "photos/" + expName(pl.id, item.id, idx) : "", fmtFull(x.a), x.by || who]);
+      });
+      otherFiles(pl.id, item.id).forEach(function(o){
+        var x = o.x;
+        rows.push([label(pl), item.l, x.n || "(名前なし)", fmtTime(x.t), okId(x.id) ? "共有の置き場(" + x.id + ")" : "カメラロールのみ", "", fmtFull(x.a), o.who]);
       });
     });
   });
@@ -924,24 +1439,19 @@ function copyRows(rows, msgId){
   var text = rows.map(function(r){ return r.map(function(c){ return String(c).replace(/[\t\n]+/g, " "); }).join("\t"); }).join("\n");
   var msg = document.getElementById(msgId);
   try{
-    navigator.clipboard.writeText(text).then(function(){ msg.textContent = "コピーしました"; }, function(){ msg.textContent = "コピーできませんでした。表を長押しで選択してください"; });
-  }catch(e){ msg.textContent = "コピーできませんでした。表を長押しで選択してください"; }
+    navigator.clipboard.writeText(text).then(function(){ msg.textContent = "コピーしました"; }, function(){ msg.textContent = "コピーできませんでした"; });
+  }catch(e){ msg.textContent = "コピーできませんでした"; }
 }
-
-/* ---------- events ---------- */
-Array.prototype.forEach.call(document.querySelectorAll(".chip"), function(ch){
-  ch.addEventListener("click", function(){
-    filter = ch.dataset.f;
-    Array.prototype.forEach.call(document.querySelectorAll(".chip"), function(o){ o.setAttribute("aria-pressed", o === ch ? "true" : "false"); });
-    applyFilter();
-  });
-});
 document.getElementById("copy").addEventListener("click", function(){ copyRows(cmpData(), "copymsg"); });
 document.getElementById("copyf").addEventListener("click", function(){ copyRows(fileData(), "copyfmsg"); });
 document.getElementById("vclose").addEventListener("click", closeViewer);
-document.addEventListener("keydown", function(e){ if (e.key === "Escape" && viewing) closeViewer(); });
+document.addEventListener("keydown", function(e){
+  if (e.key !== "Escape") return;
+  if (viewing) closeViewer();
+  document.getElementById("show").classList.add("hidden");
+});
 document.getElementById("vdel").addEventListener("click", function(){
-  if (!viewing) return;
+  if (!viewing || viewing.peer) return;
   if (!viewing.armed) { viewing.armed = true; this.textContent = "もう一度押すと削除します"; return; }
   var v = viewing, s = st(v.pid), c = JSON.parse(JSON.stringify(s.i[v.iid] || {}));
   c.f = (Array.isArray(c.f) ? c.f : []).filter(function(x){ return x && fkey(x) !== v.key; });
@@ -958,54 +1468,52 @@ document.getElementById("vdel").addEventListener("click", function(){
 function tsv(rows){
   return "﻿" + rows.map(function(r){ return r.map(function(c){ return String(c == null ? "" : c).replace(/[\t\r\n]+/g, " "); }).join("\t"); }).join("\r\n");
 }
+// one row per person per item, so nobody's entry is dropped
 function answerData(){
-  var rows = [["場所", "区分", "項目", "入力", "済", "記録時刻", "記録者", "ほかの入力"]];
+  var rows = [["場所", "区分", "項目", "記録者", "入力", "済", "記録時刻"]];
   PLACES.forEach(function(pl){
-    var label = pl.name + (pl.venue && val(pl.id, "name") ? " " + val(pl.id, "name") : "");
+    var lb = label(pl);
     pl.items.forEach(function(item){
-      var ce = cell(pl.id, item.id);
-      rows.push([label, item.g || GROUP_NAME[item.t], item.l, item.t === P ? "" : val(pl.id, item.id), isDone(pl.id, item) ? "済" : "", fmtFull(item.t === P ? ce.dt : ce.vt), ce.by || "", (Array.isArray(ce.alt) ? ce.alt : []).map(function(a){ return a.v + "(" + (a.by || "") + " " + fmtFull(a.vt) + ")"; }).join(" / ")]);
+      var g = item.g || GROUP_NAME[item.t], ce = cell(pl.id, item.id), n = 0;
+      if (mineDone(pl.id, item)) { rows.push([lb, g, item.l, ce.by || who, item.t === P ? "" : val(pl.id, item.id), "済", fmtFull(item.t === P ? ce.dt : ce.vt)]); n++; }
+      if (item.t === P) otherChecks(pl.id, item.id).forEach(function(o){ rows.push([lb, g, item.l, o.who, "", "済", fmtFull(o.dt)]); n++; });
+      else otherTexts(pl.id, item.id).forEach(function(o){ rows.push([lb, g, item.l, o.who, o.v, "済", fmtFull(o.vt)]); n++; });
+      if (!n) rows.push([lb, g, item.l, "", "", "", ""]);
     });
-    if (pl.venue) rows.push([label, "推薦順", "推薦順", RANK[st(pl.id).rank] || "", "", "", "", ""]);
-    rows.push([label, "所感", "所感", st(pl.id).note || "", "", "", "", ""]);
+    if (pl.venue) {
+      if (RANK[st(pl.id).rank]) rows.push([lb, "推薦順", "推薦順", who, RANK[st(pl.id).rank], "", ""]);
+      otherRanks(pl.id).forEach(function(o){ rows.push([lb, "推薦順", "推薦順", o.who, o.v, "", ""]); });
+    }
+    if ((st(pl.id).note || "").trim()) rows.push([lb, "所感", "所感", who, st(pl.id).note, "", ""]);
+    otherNotes(pl.id).forEach(function(o){ rows.push([lb, "所感", "所感", o.who, o.v, "", ""]); });
   });
   return rows;
-}
-function fmtFull(t){
-  if (!t) return "";
-  var d = new Date(t); if (isNaN(d.getTime())) return "";
-  function z(n){ return (n < 10 ? "0" : "") + n; }
-  return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate()) + " " + z(d.getHours()) + ":" + z(d.getMinutes()) + ":" + z(d.getSeconds());
 }
 function timeData(){
-  var rows = [["場所", "最初に開いた時刻", "最後に開いた時刻", "最初の記録", "最後の記録"]];
+  var rows = [["場所", "記録者", "最初に開いた時刻", "最後に開いた時刻", "最初の記録", "最後の記録"]];
+  var all = [{who:who, state:state}].concat(peerList());
   PLACES.forEach(function(pl){
-    var s = st(pl.id), o = Array.isArray(s.o) ? s.o : [], ts = [];
-    Object.keys(s.i || {}).forEach(function(k){
-      var c = s.i[k] || {};
-      if (c.dt) ts.push(c.dt);
-      if (c.vt) ts.push(c.vt);
-      (Array.isArray(c.f) ? c.f : []).forEach(function(x){ if (x && x.a) ts.push(x.a); });
+    all.forEach(function(p){
+      var s = p.state[pl.id]; if (!s || typeof s !== "object") return;
+      var o = Array.isArray(s.o) ? s.o : [], ts = [];
+      Object.keys(s.i || {}).forEach(function(k){
+        var c = s.i[k] || {};
+        if (c.dt) ts.push(c.dt);
+        if (c.vt) ts.push(c.vt);
+        (Array.isArray(c.f) ? c.f : []).forEach(function(x){ if (x && x.a) ts.push(x.a); });
+      });
+      if (!o.length && !ts.length) return;
+      rows.push([label(pl), p.who, fmtFull(o[0]), fmtFull(o[o.length - 1]), ts.length ? fmtFull(Math.min.apply(null, ts)) : "", ts.length ? fmtFull(Math.max.apply(null, ts)) : ""]);
     });
-    var label = pl.name + (pl.venue && val(pl.id, "name") ? " " + val(pl.id, "name") : "");
-    rows.push([label, fmtFull(o[0]), fmtFull(o[o.length - 1]), ts.length ? fmtFull(Math.min.apply(null, ts)) : "", ts.length ? fmtFull(Math.max.apply(null, ts)) : ""]);
-  });
-  return rows;
-}
-function summaryData(){
-  var rows = [["場所", "所要時間(分)", "確認", "所感"]];
-  PLACES.filter(function(p){ return !p.venue; }).forEach(function(pl){
-    var c = cardEls[pl.id];
-    rows.push([pl.name, val(pl.id, "time"), (c.dataset.n || 0) + "/" + (c.dataset.total || 0), st(pl.id).note || ""]);
   });
   return rows;
 }
 function photoEntries(){
   var out = [];
   PLACES.forEach(function(pl){
-    pl.items.filter(function(x){ return x.t === P; }).concat([{id:"_x", l:"そのほか"}]).forEach(function(item){
+    photoItems(pl).forEach(function(item){
       files(pl.id, item.id).forEach(function(x, idx){
-        if (x && okId(x.id)) out.push({id:x.id, name:expName(pl.id, item.id, idx)});
+        if (x && okId(x.id)) out.push({id:x.id, name:expName(pl.id, item.id, idx), pid:pl.id, iid:item.id, n:x.n || ""});
       });
     });
   });
@@ -1013,6 +1521,16 @@ function photoEntries(){
 }
 var exported = null;
 function setExpMsg(t){ document.getElementById("expmsg").textContent = t; }
+function shareExport(){
+  if (!exported) return false;
+  var file;
+  try{ file = new File([exported.blob], exported.name, {type:"application/zip"}); }catch(e){ file = null; }
+  if (file && navigator.canShare && navigator.canShare({files:[file]})) {
+    navigator.share({files:[file], title:"ジャカルタ現調"}).then(null, function(){});
+    return true;
+  }
+  return false;
+}
 document.getElementById("expmake").addEventListener("click", function(){
   var btn = this;
   if (typeof JSZip === "undefined") { setExpMsg("書き出しの部品を読み込めていません。電波のある場所で一度開き直してください。"); return; }
@@ -1020,7 +1538,7 @@ document.getElementById("expmake").addEventListener("click", function(){
   document.getElementById("expsend").classList.add("hidden");
   document.getElementById("explink").classList.add("hidden");
   var zip = new JSZip();
-  zip.file("data.json", JSON.stringify({app:"gencho-jkt-2026", version:APP_VERSION, who:who, exported:new Date().toISOString(), state:state}, null, 1));
+  zip.file("data.json", JSON.stringify({app:"gencho-jkt-2026", version:APP_VERSION, who:who, dev:devId, at:lastChange, exported:new Date().toISOString(), state:state, peers:peers}, null, 1));
   zip.file("answers.tsv", tsv(answerData()));
   zip.file("venues.tsv", tsv(cmpData()));
   zip.file("places.tsv", tsv(summaryData()));
@@ -1041,40 +1559,34 @@ document.getElementById("expmake").addEventListener("click", function(){
     return zip.generateAsync({type:"blob", compression:"STORE"});
   }).then(function(blob){
     var d = new Date();
-    function z(n){ return (n < 10 ? "0" : "") + n; }
     var wn = who.replace(/[\\\/:*?"<>|\s]+/g, "");
-    var name = "gencho-jakarta-" + (wn ? wn + "-" : "") + d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate()) + "-" + z(d.getHours()) + z(d.getMinutes()) + ".zip";
+    var name = "gencho-jakarta-" + (wn ? wn + "-" : "") + d.getFullYear() + z2(d.getMonth() + 1) + z2(d.getDate()) + "-" + z2(d.getHours()) + z2(d.getMinutes()) + ".zip";
     if (exported && exported.url) URL.revokeObjectURL(exported.url);
     exported = {blob:blob, name:name, url:URL.createObjectURL(blob)};
     var a = document.getElementById("explink"); a.href = exported.url; a.download = name; a.classList.remove("hidden");
     document.getElementById("expsend").classList.remove("hidden");
-    setExpMsg("できました(" + (Math.round(blob.size / 104857.6) / 10) + "MB、写真" + (list.length - missing) + "枚)。下のボタンで保存か送信をしてください。");
+    setExpMsg("できました(" + (Math.round(blob.size / 104857.6) / 10) + "MB、写真" + (list.length - missing) + "枚)。保存または送信を押して、ファイルに保存するかAirDropで送ってください。");
+    document.getElementById("expsend").focus();
   }).then(null, function(){
     setExpMsg("書き出しに失敗しました。空き容量を確認して、もう一度お試しください。");
   }).then(function(){ btn.disabled = false; });
 });
 document.getElementById("expsend").addEventListener("click", function(){
-  if (!exported) return;
-  var file;
-  try{ file = new File([exported.blob], exported.name, {type:"application/zip"}); }catch(e){ file = null; }
-  if (file && navigator.canShare && navigator.canShare({files:[file]})) {
-    navigator.share({files:[file], title:"ジャカルタ現調"}).then(null, function(){});
-  } else {
-    setExpMsg("この端末では共有を開けません。隣のリンクから保存してください。");
-  }
+  if (!shareExport()) setExpMsg("この端末では共有を開けません。下のリンクから保存してください。");
 });
-document.getElementById("expcopy").addEventListener("click", function(){ copyRows(answerData(), "expmsg"); });
+document.getElementById("expcopy").addEventListener("click", function(){ copyRows(answerData(), "updmsg"); });
 var resetArmed = false;
 document.getElementById("reset").addEventListener("click", function(){
   if (!resetArmed) { resetArmed = true; this.textContent = "もう一度押すとすべて消えます"; return; }
-  resetArmed = false; this.textContent = "入力と写真をすべて消す";
-  state = {};
-  Object.keys(urls).forEach(function(k){ URL.revokeObjectURL(urls[k]); delete urls[k]; });
-  saveLocal();
+  resetArmed = false; this.textContent = "この端末の入力と写真をすべて消す";
+  state = {}; peers = {}; timers = {}; openId = null;
+  lsSet(LS + "-timers", "{}");
+  dropUrls();
+  saveLocal(); savePeers();
   if (idb) idbClear("files").then(null, function(){});
-  PLACES.forEach(function(pl){ cardEls[pl.id].querySelectorAll("[data-media]").forEach(function(b){ b.dataset.sig = ""; b.querySelector(".thumbs").textContent = ""; }); refresh(pl.id); });
-  showStatus();
-  setExpMsg("すべて消しました。");
+  showStatus(); showSync();
+  document.getElementById("updmsg").textContent = "この端末の入力と写真を消しました。";
+  scheduleSync(1000);
 });
 
 /* ---------- recorder name ---------- */
@@ -1083,70 +1595,155 @@ document.getElementById("reset").addEventListener("click", function(){
   wi.value = who;
   wi.addEventListener("input", function(){
     who = wi.value.trim().slice(0, 20);
-    try{ localStorage.setItem(LS + "-who", who); }catch(e){}
+    lsSet(LS + "-who", who);
+    document.getElementById("whowarn").classList.toggle("hidden", !!who);
+    lastChange = Date.now(); lsSet(LS + "-at", String(lastChange));
+    scheduleSync(6000);
   });
 })();
 
-/* ---------- import and merge ---------- */
-function mergeState(remote, rwho){
-  var stats = {items:0, photos:[]};
-  PLACES.forEach(function(pl){
-    var r = remote[pl.id]; if (!r || typeof r !== "object") return;
-    var s = st(pl.id), ri = (r.i && typeof r.i === "object") ? r.i : {};
-    pl.items.concat([{id:"_x", t:P}]).forEach(function(item){
-      var rc = ri[item.id]; if (!rc || typeof rc !== "object") return;
-      var lc = JSON.parse(JSON.stringify(s.i[item.id] || {})), touched = false;
-      if (item.t === P) {
-        if (rc.d && !lc.d) { lc.d = true; lc.dt = +rc.dt || 0; lc.by = String(rc.by || rwho); touched = true; }
-        var rf = Array.isArray(rc.f) ? rc.f : [];
-        if (rf.length) {
-          if (!Array.isArray(lc.f)) lc.f = [];
-          var have = {}; lc.f.forEach(function(x){ have[fkey(x)] = true; });
-          rf.forEach(function(x, idx){
-            if (!x || typeof x !== "object" || have[fkey(x)]) return;
-            var e = {k: x.k === "v" ? "v" : "i", n: String(x.n || ""), t: +x.t || 0, sz: +x.sz || 0, a: +x.a || 0, by: String(x.by || rwho)};
-            if (okId(x.id)) { e.id = String(x.id); stats.photos.push({id:e.id, path:"photos/" + expName(pl.id, item.id, idx)}); }
-            else e.r = 1;
-            lc.f.push(e); have[fkey(e)] = true; touched = true;
-          });
-        }
-      } else {
-        var rv = typeof rc.v === "string" ? rc.v : "";
-        var lv = typeof lc.v === "string" ? lc.v : "";
-        var alts = (Array.isArray(lc.alt) ? lc.alt : []).slice();
-        var addAlt = function(a){
-          if (!a.v || !a.v.trim() || a.v === lc.v) return;
-          for (var k = 0; k < alts.length; k++) if (alts[k].v === a.v && alts[k].by === a.by) return;
-          alts.push(a); touched = true;
-        };
-        if (rv.trim() && rv !== lv) {
-          if (!lv.trim() || (+rc.vt || 0) > (+lc.vt || 0)) {
-            var old = {v: lv, vt: +lc.vt || 0, by: String(lc.by || who)};
-            lc.v = rv; lc.vt = +rc.vt || 0; lc.by = String(rc.by || rwho);
-            alts = alts.filter(function(a){ return a.v !== rv; });
-            addAlt(old);
-            touched = true;
-          } else addAlt({v: rv, vt: +rc.vt || 0, by: String(rc.by || rwho)});
-        }
-        (Array.isArray(rc.alt) ? rc.alt : []).forEach(function(a){
-          if (a && typeof a.v === "string") addAlt({v: a.v, vt: +a.vt || 0, by: String(a.by || "")});
-        });
-        if (alts.length) lc.alt = alts; else delete lc.alt;
-      }
-      if (touched) { s.i[item.id] = lc; stats.items++; }
-    });
-    var rn = typeof r.note === "string" ? r.note.trim() : "";
-    if (rn && (s.note || "").indexOf(rn) < 0) s.note = (s.note && s.note.trim()) ? s.note + "\n[" + rwho + "] " + rn : rn;
-    if (!s.rank && typeof r.rank === "string" && RANK[r.rank]) s.rank = r.rank;
-    if (Array.isArray(r.o)) {
-      var set = {};
-      (Array.isArray(s.o) ? s.o : []).concat(r.o).forEach(function(t){ if (+t) set[+t] = 1; });
-      s.o = Object.keys(set).map(Number).sort(function(a, b){ return a - b; });
-      if (s.o.length > 30) s.o.splice(1, s.o.length - 30);
-    }
-  });
-  return stats;
+/* ---------- collect everyone's entries ---------- */
+var syncUrl = lsGet(LS + "-sync") || "";
+var pushedAt = +lsGet(LS + "-pushed") || 0;
+var lastSync = +lsGet(LS + "-synced") || 0;
+var photoOn = lsGet(LS + "-photoon") !== "0";
+var upDone = lsJson(LS + "-up", {});
+var syncing = false, syncTimer = null, syncErr = "";
+function okSyncUrl(u){ return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(u) || (/^http:\/\/(localhost|127\.0\.0\.1):\d+\//.test(u) && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)); }
+function post(q){
+  return fetch(syncUrl, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(q), redirect:"follow", cache:"no-store"})
+    .then(function(res){ if (!res.ok) throw new Error("http"); return res.json(); });
 }
+function b64(buf){
+  var u = new Uint8Array(buf), s = "", i;
+  for (i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function unb64(s){
+  var b = atob(s), u = new Uint8Array(b.length), i;
+  for (i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+  return u.buffer;
+}
+function pendingPhotos(){ return photoOn ? photoEntries().filter(function(e){ return !upDone[e.id]; }) : []; }
+function uploadPhotos(){
+  var list = pendingPhotos(), i = 0;
+  function next(){
+    if (i >= list.length || !idb || !syncUrl) return Promise.resolve();
+    var e = list[i++];
+    return idbGet("files", e.id).then(function(r){
+      if (!r || !r.buf) { upDone[e.id] = 1; return; }
+      return post({op:"photo", id:e.id, dev:devId, who:who, name:e.name, orig:e.n, b64:b64(r.buf)}).then(function(res){
+        if (!res || !res.ok) throw new Error("photo");
+        upDone[e.id] = 1; lsSet(LS + "-up", JSON.stringify(upDone));
+        showStatus(); if (view === "data") showSync();
+      });
+    }).then(next);
+  }
+  return next();
+}
+function takePeers(list){
+  var n = 0;
+  (Array.isArray(list) ? list : []).forEach(function(p){
+    if (!p || typeof p !== "object" || p.dev === devId || !/^[a-z0-9]{8,40}$/.test(String(p.dev || ""))) return;
+    if (!p.state || typeof p.state !== "object") return;
+    peers[p.dev] = {who: String(p.who || "").slice(0, 20) || "別端末", at: +p.at || 0, state: p.state};
+    n++;
+  });
+  if (n) savePeers();
+  return n;
+}
+function redraw(){
+  if (view === "home") renderHome();
+  if (view === "place") updatePlace();
+  if (view === "sum") tables();
+  if (view === "data") showSync();
+  totals(); showStatus();
+}
+function syncNow(manual){
+  if (!syncUrl || syncing) return;
+  if (!navigator.onLine) { syncErr = "電波がありません。記入は端末に残っていて、つながったときに送られます。"; redraw(); return; }
+  syncing = true; syncErr = ""; showStatus(); if (view === "data") showSync();
+  var q = {op:"sync", dev:devId, who:who, have:{}};
+  peerList().forEach(function(p){ q.have[p.dev] = p.at; });
+  if (lastChange > pushedAt || !pushedAt) { q.at = lastChange || Date.now(); q.state = state; }
+  post(q).then(function(r){
+    if (!r || !r.ok) throw new Error("sync");
+    if (q.state) { pushedAt = q.at; lsSet(LS + "-pushed", String(pushedAt)); if (!lastChange) { lastChange = q.at; lsSet(LS + "-at", String(lastChange)); } }
+    takePeers(r.peers);
+    lastSync = Date.now(); lsSet(LS + "-synced", String(lastSync));
+    return uploadPhotos();
+  }).then(null, function(){
+    syncErr = "集められませんでした。電波のある場所でもう一度お試しください。記入は端末に残っています。";
+  }).then(function(){
+    syncing = false;
+    redraw();
+    if (manual && !syncErr) toast("全員分を集めました");
+    if (lastChange > pushedAt && !syncErr) scheduleSync(4000);
+  });
+}
+function scheduleSync(ms){
+  if (!syncUrl) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(function(){ syncNow(false); }, ms);
+}
+function showSync(){
+  document.getElementById("syncoff").classList.toggle("hidden", !!syncUrl);
+  document.getElementById("syncon").classList.toggle("hidden", !syncUrl);
+  document.getElementById("verline").textContent = "この端末の版: " + APP_VERSION;
+  if (!syncUrl) return;
+  var pend = lastChange > pushedAt;
+  document.getElementById("syncstate").textContent = syncing ? "送信中" : (!navigator.onLine ? "電波待ち" : (pend ? "未送信の記入あり" : "集約済み"));
+  document.getElementById("synclast").textContent = lastSync ? fmtTime(lastSync) : "まだ";
+  document.getElementById("syncphotos").textContent = photoOn ? pendingPhotos().length + "枚" : "送らない設定";
+  document.getElementById("syncphotoon").checked = photoOn;
+  document.getElementById("syncmsg").textContent = syncErr;
+  var box = document.getElementById("peerlist"); box.textContent = "";
+  function kv(a, b){ var d = el("div", "kv"); d.appendChild(el("span", null, a)); d.appendChild(el("span", null, b)); box.appendChild(d); }
+  kv((who || "この端末") + "(この端末)", entryCount(state) + "件");
+  peerList().forEach(function(p){ var n = entryCount(p.state); if (n) kv(p.who, n + "件  " + fmtTime(p.at)); });
+}
+document.getElementById("syncconnect").addEventListener("click", function(){
+  var u = document.getElementById("syncurl").value.trim(), msg = document.getElementById("syncmsg"), btn = this;
+  if (!okSyncUrl(u)) { msg.textContent = "接続コードの形が違います。https://script.google.com/macros/s/ で始まり /exec で終わる文字列を貼り付けてください。"; return; }
+  if (!who) { msg.textContent = "先に、場所の画面でこの端末の記録者の名前を入れてください。"; return; }
+  btn.disabled = true; msg.textContent = "確認しています";
+  syncUrl = u;
+  post({op:"ping"}).then(function(r){
+    if (!r || !r.ok || r.app !== "gencho-sync") throw new Error("ping");
+    lsSet(LS + "-sync", syncUrl);
+    msg.textContent = "";
+    showSync(); showStatus();
+    syncNow(true);
+  }).then(null, function(){
+    syncUrl = "";
+    msg.textContent = "接続できませんでした。接続コードと電波を確認してください。";
+  }).then(function(){ btn.disabled = false; });
+});
+document.getElementById("syncnow").addEventListener("click", function(){ syncNow(true); });
+document.getElementById("syncphotoon").addEventListener("change", function(){
+  photoOn = this.checked; lsSet(LS + "-photoon", photoOn ? "1" : "0");
+  showSync(); showStatus();
+  if (photoOn) scheduleSync(500);
+});
+document.getElementById("synccopy").addEventListener("click", function(){
+  var msg = document.getElementById("syncmsg");
+  try{ navigator.clipboard.writeText(syncUrl).then(function(){ msg.textContent = "接続コードをコピーしました。ほかの端末の同じ画面に貼り付けてください。"; }, function(){ msg.textContent = "コピーできませんでした"; }); }
+  catch(e){ msg.textContent = "コピーできませんでした"; }
+});
+var dropArmed = false;
+document.getElementById("syncdrop").addEventListener("click", function(){
+  if (!dropArmed) { dropArmed = true; this.textContent = "もう一度押すと解除します"; return; }
+  dropArmed = false; this.textContent = "接続を解除";
+  syncUrl = ""; lsSet(LS + "-sync", "");
+  pushedAt = 0; lsSet(LS + "-pushed", "0");
+  showSync(); showStatus();
+});
+window.addEventListener("online", function(){ showStatus(); scheduleSync(1500); });
+window.addEventListener("offline", showStatus);
+document.addEventListener("visibilitychange", function(){ if (!document.hidden) scheduleSync(800); });
+setInterval(function(){ if (!document.hidden && syncUrl && navigator.onLine) syncNow(false); }, 90000);
+
+/* ---------- take in another device's file (no signal) ---------- */
 document.getElementById("impfile").addEventListener("change", function(){
   var inp = this, f = inp.files && inp.files[0], msg = document.getElementById("impmsg");
   inp.value = "";
@@ -1160,30 +1757,43 @@ document.getElementById("impfile").addEventListener("change", function(){
       var d = JSON.parse(txt);
       if (!d || d.app !== "gencho-jkt-2026" || !d.state || typeof d.state !== "object") throw new Error("nodata");
       var rwho = String(d.who || "").slice(0, 20) || "別端末";
-      var stats = mergeState(d.state, rwho), i = 0, saved = 0;
+      var rdev = /^[a-z0-9]{8,40}$/.test(String(d.dev || "")) ? d.dev : "file" + rwho.split("").map(function(c){ return c.charCodeAt(0).toString(36); }).join("").slice(0, 24) + "00000000";
+      if (rdev === devId) { msg.textContent = "これはこの端末でつくった控えファイルです。ほかの端末のファイルを選んでください。"; return; }
+      var rat = +d.at || Date.parse(d.exported) || Date.now(), list = [];
+      if (!peers[rdev] || (+peers[rdev].at || 0) <= rat) list.push({dev:rdev, who:rwho, at:rat, state:d.state});
+      Object.keys((d.peers && typeof d.peers === "object") ? d.peers : {}).forEach(function(k){
+        var p = d.peers[k];
+        if (!p || k === devId) return;
+        if (!peers[k] || (+peers[k].at || 0) < (+p.at || 0)) list.push({dev:k, who:p.who, at:p.at, state:p.state});
+      });
+      takePeers(list);
+      var paths = [], i = 0, saved = 0;
+      PLACES.forEach(function(pl){
+        photoItems(pl).forEach(function(item){
+          var s = d.state[pl.id], c = s && s.i && s.i[item.id];
+          (c && Array.isArray(c.f) ? c.f : []).forEach(function(x, idx){ if (x && okId(x.id)) paths.push({id:String(x.id), path:"photos/" + expName(pl.id, item.id, idx)}); });
+        });
+      });
       function next(){
-        if (i >= stats.photos.length) return Promise.resolve();
-        var p = stats.photos[i++], zf = zip.file(p.path);
-        msg.textContent = "写真を読み込んでいます " + i + "/" + stats.photos.length;
+        if (i >= paths.length) return Promise.resolve();
+        var p = paths[i++], zf = zip.file(p.path);
+        msg.textContent = "写真を読み込んでいます " + i + "/" + paths.length;
         if (!zf || !idb) return next();
         return zf.async("arraybuffer").then(function(buf){
           return idbPut("files", p.id, {buf:buf, type:"image/jpeg"}).then(function(){ saved++; });
         }).then(null, function(){}).then(next);
       }
       return next().then(function(){
-        saveLocal();
-        PLACES.forEach(function(pl){ refresh(pl.id); });
-        showStatus();
-        msg.textContent = rwho + " のデータを合算しました(項目" + stats.items + "件、写真" + saved + "枚)。";
+        redraw();
+        msg.textContent = rwho + " の記入を加えました(" + entryCount(d.state) + "件、写真" + saved + "枚)。この端末の記入はそのまま残っています。";
       });
     });
   }).then(null, function(){
-    msg.textContent = "読み込めませんでした。このアプリで書き出したファイルを選んでください。";
+    msg.textContent = "読み込めませんでした。このアプリでつくった控えファイルを選んでください。";
   });
 });
 
 /* ---------- version ---------- */
-document.getElementById("verline").textContent = "この端末の版: " + APP_VERSION;
 document.getElementById("update").addEventListener("click", function(){
   var msg = document.getElementById("updmsg");
   if (!("serviceWorker" in navigator) || !window.caches) { msg.textContent = "この画面では更新できません。Safariで開き直してください。"; return; }
@@ -1204,24 +1814,30 @@ document.getElementById("update").addEventListener("click", function(){
 });
 
 /* ---------- start ---------- */
-document.body.classList.add("has-assets");
 var hadLocal = loadLocal();
-build();
-PLACES.forEach(function(pl){ refresh(pl.id); });
-if (openId && cardEls[openId]) { var keep = openId; openId = null; toggle(keep); }
+peers = lsJson(LS + "-peers", {});
+// once the recorder is named, keep the name field out of the way below the list
+if (who) document.getElementById("v-home").appendChild(document.getElementById("whopanel"));
+go("home");
 showStatus();
 
 openDb().then(function(d){
   idb = d;
-  if (hadLocal) { mirror(JSON.stringify({state:state, open:openId})); if (openId) renderMedia(openId); return; }
+  if (hadLocal) { mirror(JSON.stringify({state:state, open:openId})); return; }
   return idbGet("kv", "state").then(function(s){
     if (typeof s !== "string") return;
     try{
       var o = JSON.parse(s);
-      if (o && o.state) { state = o.state; saveLocal(); PLACES.forEach(function(pl){ refresh(pl.id); }); }
+      if (o && o.state) { state = o.state; saveLocal(true); redraw(); }
     }catch(e){}
   });
-}).then(null, function(){ idb = null; });
+}).then(function(){
+  if (!idb || Object.keys(peers).length) return;
+  return idbGet("kv", "peers").then(function(s){
+    if (typeof s !== "string") return;
+    try{ var o = JSON.parse(s); if (o && typeof o === "object") { peers = o; redraw(); } }catch(e){}
+  });
+}).then(null, function(){ idb = idb || null; }).then(function(){ scheduleSync(1200); });
 
 try{ if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(null, function(){}); }catch(e){}
 
@@ -1233,7 +1849,7 @@ try{ if (navigator.storage && navigator.storage.persist) navigator.storage.persi
   navigator.serviceWorker.register("sw.js").then(function(){
     return navigator.serviceWorker.ready;
   }).then(function(){
-    say(standalone ? "" : "電波なしで使う準備ができました。Safariの共有メニューから「ホーム画面に追加」を押し、以後はホーム画面のアイコンから開いてください。");
+    say(standalone ? "" : "電波なしで使う準備ができました。Safariの共有メニューからホーム画面に追加を押し、以後はホーム画面のアイコンから開いてください。");
   }, function(){
     say("電波なしで使う準備ができませんでした。電波のある場所で開き直してください。");
   });
