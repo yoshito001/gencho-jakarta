@@ -262,6 +262,7 @@ function golfItems(){
     it("wc", P, "トイレ"),
     it("route", P, "到着からスタートまでの動線(動画)"),
     it("lunch", P, "昼食"),
+    it("hall", P, "昼食会場の広さと席数"),
     it("time", M, "HQからの所要時間(朝の時間帯)", {u:"分"}),
     it("rental", Q, "レンタルクラブとシューズの本数、料金"),
     it("book", Q, "レンタルクラブの事前予約の方法と締め切り"),
@@ -283,7 +284,9 @@ var PLACES = [
     it("imm", M, "入国の所要時間(到着カード、Visa)", {u:"分"}),
     it("bag", M, "荷物受取から出口までの時間", {u:"分"}),
     it("flight", Q, "搭乗した便名と到着時刻"),
-    it("term", Q, "本番の便と同じターミナルか")
+    it("term", Q, "本番の便と同じターミナルか"),
+    it("crowdn", Q, "深夜着(23:45から0:35)の入国と出口の混雑"),
+    it("vip", Q, "VIP車とシャトルバスの乗り場の違い")
   ]},
   {id:"transfer", name:"空港からホテル", must:true, items:[
     it("time", M, "ホテルまでの所要時間", {u:"分"}),
@@ -296,10 +299,41 @@ var PLACES = [
     it("shower", P, "標準客室のシャワーの目隠し"),
     it("desk", P, "ロビーとボールルーム前(日本側受付の設置場所)"),
     it("smoke", P, "喫煙所"),
+    it("lobby", P, "ロビーの集合場所(50から60名)"),
+    it("bus", P, "ゴルフ場行きバスの乗降場所"),
+    it("bar", P, "ホテル内のバー、ラウンジ(3月28日の二次会候補)"),
     it("twin", Q, "ツインの有無"),
     it("cat", Q, "部屋カテゴリーの正式名称"),
     it("bf", Q, "朝食会場と開始時刻"),
-    it("bag", Q, "ゴルフバッグの預かり")
+    it("bag", Q, "ゴルフバッグの預かり"),
+    it("late", Q, "深夜と早朝のチェックイン対応、アーリーチェックインの料金"),
+    it("out", Q, "早朝3:00から4:00のチェックアウト対応と精算"),
+    it("bfe", Q, "朝食の最も早い時刻(ゴルフ5:45出発に間に合うか)、朝食ボックスの可否"),
+    it("spa", Q, "プール、スパの営業時間と料金"),
+    it("barq", Q, "バー、ラウンジの営業時間、席数、喫煙")
+  ]},
+  {id:"lunch", name:"昼食会場(モール内)", sub:"PIK Avenue Mall", must:true, items:[
+    it("kinka", P, "Kinka Sushi Bar Izakaya"),
+    it("busaba", P, "Busaba"),
+    it("bistecca", P, "Bistecca"),
+    it("haidilao", P, "Haidilao Hot Pot"),
+    it("court", P, "フードコート"),
+    it("kinka_q", Q, "Kinka: 個室の人数、予約方法、1人あたりの予算"),
+    it("busaba_q", Q, "Busaba: 席数、予約方法、1人あたりの予算"),
+    it("bistecca_q", Q, "Bistecca: 席数、予約方法、1人あたりの予算"),
+    it("haidilao_q", Q, "Haidilao: 席数、予約方法、1人あたりの予算"),
+    it("court_q", Q, "フードコート: 席数、支払い方法"),
+    it("crowd", Q, "昼12:00から13:00の混雑")
+  ]},
+  {id:"after28", name:"二次会会場(3月28日)", sub:"HQから徒歩圏", must:true, items:[
+    it("ext", P, "外観と入口"),
+    it("seat", P, "店内と席"),
+    it("time", M, "HQからの徒歩時間", {u:"分"}),
+    it("name", Q, "店名"),
+    it("hours", Q, "営業時間とラストオーダー"),
+    it("book", Q, "予約の可否と入れる人数"),
+    it("smoke", Q, "喫煙の可否"),
+    it("price", Q, "料金の目安")
   ]},
   {id:"v1", name:"懇親会 候補1", must:true, venue:true, items:venueItems()},
   {id:"v2", name:"懇親会 候補2", must:true, venue:true, items:venueItems()},
@@ -312,6 +346,7 @@ var PLACES = [
     it("wc", P, "トイレ、喫煙所"),
     it("drop", P, "乗降場所"),
     it("time", M, "HQからの移動時間", {u:"分"}),
+    it("time2", M, "18:15発での所要時間(夕方の渋滞)", {u:"分"}),
     it("back", Q, "帰りの移動手段(シャトルバスの有無)"),
     it("food", Q, "食事の感想", {opt:true})
   ]},
@@ -326,25 +361,55 @@ var PLACES = [
   {id:"conf", name:"会議会場", must:false, items:[
     it("hall", P, "会場"),
     it("route", P, "受付から会場入口までの動線(動画)"),
-    it("wc", P, "トイレ、控室")
+    it("wc", P, "トイレ、控室"),
+    it("ball", P, "Opening Ceremony & Galaのボールルーム"),
+    it("mtg", P, "NP会議、JIB programのMeeting Room")
   ]},
   {id:"mercure", name:"メルキュールホテル", must:false, items:[
     it("room", P, "部屋", {opt:true}),
-    it("time", M, "HQからの徒歩時間", {u:"分"})
+    it("apdc", P, "APDC TrainingのMeeting Room"),
+    it("time", M, "HQからの徒歩時間", {u:"分"}),
+    it("early", M, "早朝5:30のHQへの徒歩時間", {u:"分"}),
+    it("path", Q, "早朝と深夜の経路(モールが閉まっている時間帯)")
   ]},
   {id:"mall", name:"隣接ショッピングモール", must:false, items:[
     it("massage", P, "マッサージ店"),
     it("wc", P, "トイレ"),
     it("gift", P, "お土産店"),
     it("money", P, "両替所、薬局、コンビニ"),
-    it("jfood", P, "日本食の店")
+    it("jfood", P, "日本食の店"),
+    it("hours", Q, "営業時間と、ホテル直結通路の開閉時刻")
+  ]},
+  {id:"apdcnight", name:"APDC Night会場", sub:"Masterpiece Sky Lounge", must:false, items:[
+    it("ext", P, "外観と入口"),
+    it("time", M, "HQからの移動時間", {u:"分"}),
+    it("place", Q, "場所、懇親会候補からの移動時間")
+  ]},
+  {id:"pik", name:"観光地(PIK周辺)", sub:"Pantjoran PIK、Cove at Batavia PIK、Land's End", must:false, items:[
+    it("pant", P, "Pantjoran PIKの街並みと乗降場所"),
+    it("pantwc", P, "Pantjoran PIKのトイレ"),
+    it("cove", P, "Cove at Batavia PIKの遊歩道、日陰と休憩場所"),
+    it("talassa", P, "Talassa"),
+    it("lands", P, "Land's End Pasir Putih"),
+    it("t_pant", M, "HQからPantjoran PIKまでの所要時間", {u:"分"}),
+    it("t_cove", M, "PantjoranからCoveまでの徒歩時間", {u:"分"}),
+    it("t_lands", M, "HQからLand's Endまでの所要時間", {u:"分"}),
+    it("pantlunch", Q, "Pantjoran PIKの昼食の店(団体の席、ハラル対応、予算)"),
+    it("talassa_q", Q, "Talassa: 席数、予約方法、予算"),
+    it("lands_q", Q, "Land's End: 入場料、トイレ")
   ]},
   {id:"sight", name:"観光地", must:false, items:[
     it("mosque", P, "モスク"),
     it("tower", P, "タワー"),
     it("time", M, "HQからモスクまでの所要時間", {u:"分"}),
     it("time2", M, "HQからタワーまでの所要時間", {u:"分"}),
-    it("rule", Q, "服装の制限と入場料")
+    it("rule", Q, "服装の制限と入場料"),
+    it("kota", Q, "Kota Tua: HQからの所要時間(平日の午前)、乗降場所"),
+    it("museum", Q, "Kota Tuaの博物館の休館日(月曜)と入館料"),
+    it("batavia", Q, "Cafe Batavia: 団体の席、予約方法、予算"),
+    it("monas", Q, "モナス: 月曜の開場状況"),
+    it("back", Q, "市内からHQへの戻りの所要時間(15:30発)"),
+    it("car", Q, "貸切車の手配先と料金(10名、20名)")
   ]},
   {id:"airport_out", name:"空港(出発)", must:true, items:[
     it("drop", P, "車の降車場所"),
@@ -353,7 +418,18 @@ var PLACES = [
     it("smoke", P, "喫煙所(中と外)"),
     it("cafe", P, "カフェなど"),
     it("time", M, "チェックインから搭乗口までの所要時間", {u:"分"}),
-    it("crowd", Q, "混雑状況")
+    it("early", M, "早朝のホテルから空港までの所要時間", {u:"分"}),
+    it("crowd", Q, "混雑状況"),
+    it("open", Q, "早朝3:30から4:30の混雑、チェックインカウンターの開始時刻")
+  ]},
+  {id:"coc", name:"COCへの確認", must:true, items:[
+    it("apdclunch", Q, "APDC TrainingとAPDC Excursionの昼食の有無"),
+    it("exc", Q, "3月30日のExcursionsの時間と行程、3月29日の設定の有無"),
+    it("vip", Q, "VIP Lunchの主催者と招待の範囲"),
+    it("dress", Q, "各行事のドレスコード"),
+    it("galabus", Q, "ガラ会場へのシャトルバスの有無と出発時刻"),
+    it("dep", Q, "3月31日早朝(3:15、4:00発)の空港行き車両"),
+    it("arr", Q, "入国A、B、Cの各便への空港送迎(VIP車の台数、シャトルバスの時刻)")
   ]}
 ];
 var GROUP_NAME = {p:"撮る", m:"計る", q:"聞く"};
@@ -365,7 +441,7 @@ var CMP_ROWS = [
 ];
 
 /* ---------- state ---------- */
-var APP_VERSION = "6";
+var APP_VERSION = "7";
 var LS = "gencho-jkt-2026-local";
 var state = {};      // pid -> {i:{iid:{d,v,f}}, note, rank}
 var filter = "all", openId = null, saveOk = true, idb = null;
