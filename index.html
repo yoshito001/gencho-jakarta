@@ -251,7 +251,12 @@ function venueItems(){
 }
 function golfItems(){
   return [
+    it("ext", P, "クラブハウスの外観"),
+    it("course", P, "コースの景観"),
+    it("drop", P, "送迎バスの乗降場所"),
     it("front", P, "チェックイン、フロント"),
+    it("locker", P, "ロッカー室"),
+    it("range", P, "練習場"),
     it("cloak", P, "クローク"),
     it("shower", P, "シャワー室とタオル"),
     it("wc", P, "トイレ"),
@@ -259,6 +264,8 @@ function golfItems(){
     it("lunch", P, "昼食"),
     it("time", M, "HQからの所要時間(朝の時間帯)", {u:"分"}),
     it("rental", Q, "レンタルクラブとシューズの本数、料金"),
+    it("book", Q, "レンタルクラブの事前予約の方法と締め切り"),
+    it("cart", Q, "カートとキャディの形式(乗用か、1組に何名つくか)"),
     it("tip", Q, "キャディのチップ、支払い方法"),
     it("dress", Q, "ドレスコード"),
     it("rain", Q, "雷雨中断時の待機場所")
@@ -298,8 +305,8 @@ var PLACES = [
   {id:"v2", name:"懇親会 候補2", must:true, venue:true, items:venueItems()},
   {id:"v3", name:"懇親会 候補3", must:true, venue:true, items:venueItems()},
   {id:"v4", name:"懇親会 候補4", must:true, venue:true, items:venueItems()},
-  {id:"golf1", name:"ゴルフ場 Sedayu Indo Golf", sub:"本番3月29日", must:true, items:golfItems()},
-  {id:"golf2", name:"ゴルフ場 Damai Indah Golf PIK", sub:"本番3月30日", must:true, items:golfItems()},
+  {id:"golf2", name:"ゴルフ場 Damai Indah Golf PIK", sub:"本番3月29日", must:true, items:golfItems()},
+  {id:"golf1", name:"ゴルフ場 Sedayu Indo Golf", sub:"本番3月30日", must:true, items:golfItems()},
   {id:"gala", name:"ガラパーティー会場", sub:"Angke Heritage(PIK2)", must:true, items:[
     it("hall", P, "会場の広さと席の配置"),
     it("wc", P, "トイレ、喫煙所"),
@@ -358,7 +365,7 @@ var CMP_ROWS = [
 ];
 
 /* ---------- state ---------- */
-var APP_VERSION = "5";
+var APP_VERSION = "6";
 var LS = "gencho-jkt-2026-local";
 var state = {};      // pid -> {i:{iid:{d,v,f}}, note, rank}
 var filter = "all", openId = null, saveOk = true, idb = null;
